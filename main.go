@@ -10,7 +10,7 @@ import (
 
 func main(){
 	   prvKey, err := createKey()
-	   if err !:=nil{
+	   if err !=nil{
 			fmt.Println("Could not generate PrivateKey")
 		}else{
 			fmt.Println("PrivateKey Created.")
