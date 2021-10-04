@@ -168,11 +168,11 @@ func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 
 
 func StoreKey (fileName string, key *Key, auth string) error{
-keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
+keyjson, err := EncryptKey(key, auth)
 	if err != nil {
 		return err
 	}
-	tmpName, err := WriteTemporaryKeyFile(filename, keyjson)
+	tmpName, err := WriteTemporaryKeyFile(fileName, keyjson)
 	os.Rename(tmpName, fileName)
 }
 
@@ -192,6 +192,7 @@ func GetKey(addr string, filename, auth string) (*Key, error) {
 	}
 	return key, nil
 }
+
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
