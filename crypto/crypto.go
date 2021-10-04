@@ -170,7 +170,7 @@ func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 
 
 func StoreKey ( key *Key, auth string) error{
-prvKey, PubKey encode(key, key.PublicKey)
+prvKey, PubKey := encode(key, key.PublicKey)
 
 keyjson, err := Encrypt(auth, prvKey)
 	if err != nil {
@@ -190,7 +190,7 @@ func GetKey(addr common.Address, filename, auth string) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	prvKey, PubKey decode(prvKey,fileName)
+	prvKey, PubKey := decode(prvKey,fileName)
 	// Make sure we're really operating on the requested key (no swap attacks)
 	
 	return prvKey, nil
