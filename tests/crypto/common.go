@@ -1,11 +1,5 @@
 package common
 
-import (
-	"crypto/ecdsa"
-	"errors"
-	"math/big"
-	"hash"
-)
 
 const (
 	//FGE Account Address Length
