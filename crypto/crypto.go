@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"os"
 	"github.com/fgeth/fg/common"
-	"github.com/fgeth/fg/common/math"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/crypto/scrypt"
@@ -43,10 +42,7 @@ const (
 
 )
 
-var(
-	secp256k1N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
-	secp256k1halfN = new(big.Int).Div(secp256k1N, big.NewInt(2))
-	)
+
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
 	// to simplify lookups we also store the address
