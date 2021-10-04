@@ -2,7 +2,6 @@ package common
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"math/big"
 	"hash"
 )
@@ -39,33 +38,33 @@ type SignedTx struct {
 }
 
 type Signer struct {
-	PubKey			PublicKey
+	PubKey			ecdsa.PublicKey
 	R				big.Int
 	S				big.Int
 }
 type Transactions struct{ 
-	ChainID		  unit
-	Transactions  map[unit64]Transaction  // Map of all Transactions for the Year by TxHash
+	ChainID		  uint
+	Transactions  map[uint64]Transaction  // Map of all Transactions for the Year by TxHash
 
 }
 
 type TransactionPool struct{
    Txs			[]Transaction
-   NextNumber	unit64
+   NextNumber	uint64
 }
 
 
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
 	// to simplify lookups we also store the address
-	Address account.Address
+	Address Address
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
 }
 
 type encryptedKeyJSONV3 struct {
-	Address account.Address     `json:"address"`
+	Address Address     `json:"address"`
 	Crypto  CryptoJSON 			`json:"crypto"`
 	Id      string     			`json:"id"`
 	Version int       			`json:"version"`
