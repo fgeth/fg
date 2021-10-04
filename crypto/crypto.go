@@ -34,7 +34,7 @@ const (
 
 
 
-func sign(hash common.Hash, prvKey ecdsa.PrivateKey ) big.Int, big.Int{
+func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) big.Int, big.Int{
 	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
 	if err != nil {
 		panic(err)
@@ -43,7 +43,7 @@ func sign(hash common.Hash, prvKey ecdsa.PrivateKey ) big.Int, big.Int{
 
 }
 
-func verify(hash common.Hash, r big.Int, s big.Int, pubKey PublicKey) bool{
+func Verify(hash common.Hash, r big.Int, s big.Int, pubKey PublicKey) bool{
 	return ecdsa.Verify(pubKey, hash[:], r, s) 
 
 }
@@ -197,7 +197,7 @@ func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 	return HexToECDSA(string(buf))
 }
 
-func writeTemporaryKeyFile(file string, content []byte) (string, error) {
+func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
 	const dirPerm = 0700
@@ -225,7 +225,7 @@ keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
 	}
-	tmpName, err := writeTemporaryKeyFile(filename, keyjson)
+	tmpName, err := WriteTemporaryKeyFile(filename, keyjson)
 	os.Rename(tmpName, fileName)
 }
 
@@ -324,7 +324,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		if err := json.Unmarshal(keyjson, k); err != nil {
 			return nil, err
 		}
-		keyBytes, keyId, err = decryptKeyV3(k, auth)
+		keyBytes, keyId, err = DecryptKeyV3(k, auth)
 	
 	// Handle any decryption errors and return the key
 	if err != nil {
@@ -389,7 +389,7 @@ func DecryptDataV3(cryptoJson CryptoJSON, auth string) ([]byte, error) {
 	return plainText, err
 }
 
-func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyId []byte, err error) {
+func DecryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyId []byte, err error) {
 	if keyProtected.Version != version {
 		return nil, nil, fmt.Errorf("version not supported: %v", keyProtected.Version)
 	}
