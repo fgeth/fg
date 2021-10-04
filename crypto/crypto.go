@@ -170,27 +170,28 @@ func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 
 
 func StoreKey ( key *ecdsa.PrivateKey, auth string) error{
-prvKey, PubKey := encode(key, key.PublicKey)
+prvKey, PubKey := encode(key, &key.PublicKey)
 
-keyjson, err := Encrypt([]byte(auth), prvKey)
+keyjson, err := Encrypt([]byte(auth), []byte(prvKey))
 	if err != nil {
 		return err
 	}
 	tmpName, err := WriteTemporaryKeyFile(PubKey, keyjson)
 	os.Rename(tmpName, PubKey)
+	return err
 }
 
-func GetKey(addr common.Address, filename, auth string) (*Key, error) {
+func GetKey(filename, auth string) (*ecdsa.PrivateKey, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	key, err := Decrypt(auth, keyjson)
+	key, err := Decrypt([]byte(auth), []byte(keyjson))
 	if err != nil {
 		return nil, err
 	}
-	prvKey, PubKey := decode(prvKey,fileName)
+	prvKey, pubKey := decode(key,filename)
 	// Make sure we're really operating on the requested key (no swap attacks)
 	
 	return prvKey, nil
