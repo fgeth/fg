@@ -185,11 +185,11 @@ func GetKey(filename, auth string) (*ecdsa.PrivateKey,*ecdsa.PublicKey, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	key, err := Decrypt([]byte(auth), []byte(keyjson))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	prvKey, pubKey := decode(key,filename)
 	// Make sure we're really operating on the requested key (no swap attacks)
