@@ -6,16 +6,16 @@ import (
 	"crypto/rand"
 	"crypto/aes"
     "crypto/cipher"
-    "crypto/sha256"
+    //"crypto/sha256"
 	"crypto/x509"
     "encoding/pem"
-	"encoding/hex"
-	"encoding/json"
-    "fmt"
-    "log"
-    "io"
+	//"encoding/hex"
+	//"encoding/json"
+    //"fmt"
+    //"log"
+    //"io"
 	"io/ioutil"
-	"math"
+	//"math"
 	"math/big"
 	"path/filepath"
 	"os"
@@ -169,10 +169,10 @@ func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 }
 
 
-func StoreKey ( key *Key, auth string) error{
+func StoreKey ( key *ecdsa.PrivateKey, auth string) error{
 prvKey, PubKey := encode(key, key.PublicKey)
 
-keyjson, err := Encrypt(auth, prvKey)
+keyjson, err := Encrypt([]byte]auth, prvKey)
 	if err != nil {
 		return err
 	}
