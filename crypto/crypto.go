@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"os"
 	"github.com/fgeth/fg/common"
+	"github.com/google/uuid"
 )
 const (
 	// StandardScryptN is the N parameter of Scrypt encryption algorithm, using 256MB
@@ -31,9 +32,39 @@ const (
 )
 
 
+type Key struct {
+	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
+	// to simplify lookups we also store the address
+	Address Address
+	// we only store privkey as pubkey/address can be derived from it
+	// privkey in this struct is always in plaintext
+	PrivateKey *ecdsa.PrivateKey
+}
 
 
-func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (big.Int, big.Int, error){
+type encryptedKeyJSONV3 struct {
+	Address Address             `json:"address"`
+	Crypto  CryptoJSON 			`json:"crypto"`
+	Id      string     			`json:"id"`
+	Version int       			`json:"version"`
+}
+
+type CryptoJSON struct {
+	Cipher       string                 `json:"cipher"`
+	CipherText   string                 `json:"ciphertext"`
+	CipherParams cipherparamsJSON       `json:"cipherparams"`
+	KDF          string                 `json:"kdf"`
+	KDFParams    map[string]interface{} `json:"kdfparams"`
+	MAC          string                 `json:"mac"`
+}
+
+type cipherparamsJSON struct {
+	IV string `json:"iv"`
+}
+
+
+
+func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (*big.Int, big.Int, error){
 	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
 	if err != nil {
 		panic(err)
@@ -55,7 +86,7 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 
 
 // NewKeccakState creates a new KeccakState
-func NewKeccakState() KeccakState {
+func NewKeccakState() common.KeccakState {
 	return sha3.NewLegacyKeccak256().(common.KeccakState)
 }
 
@@ -67,7 +98,7 @@ func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
 	return h
 }
 
-func (k *common.Key) MarshalJSON() (j []byte, err error) {
+func (k *Key) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
 		hex.EncodeToString(k.Address[:]),
 		hex.EncodeToString(crypto.FromECDSA(k.PrivateKey)),
@@ -78,7 +109,7 @@ func (k *common.Key) MarshalJSON() (j []byte, err error) {
 	return j, err
 }
 
-func (k *common.Key) UnmarshalJSON(j []byte) (err error) {
+func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	keyJSON := new(plainKeyJSON)
 	err = json.Unmarshal(j, &keyJSON)
 	if err != nil {
@@ -219,7 +250,7 @@ func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 }
 
 
-func StoreKey (fileName string, key *common.Key, auth string) error{
+func StoreKey (fileName string, key *Key, auth string) error{
 keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
@@ -228,7 +259,7 @@ keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	os.Rename(tmpName, fileName)
 }
 
-func GetKey(addr string, filename, auth string) (*common.Key, error) {
+func GetKey(addr string, filename, auth string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -247,7 +278,7 @@ func GetKey(addr string, filename, auth string) (*common.Key, error) {
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
-func EncryptKey(key *common.Key, auth string ) ([]byte, error) {
+func EncryptKey(key *Key, auth string ) ([]byte, error) {
 	keyBytes := math.PaddedBigBytes(key.PrivateKey.D, 32)
 	cryptoStruct, err := EncryptDataV3(keyBytes, []byte(auth), scryptN, scryptP)
 	if err != nil {
@@ -347,7 +378,7 @@ func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
 	}
 	return elliptic.Marshal(S256(), pub.X, pub.Y)
 }
-func PubkeyToAddress(p ecdsa.PublicKey) account.Address {
+func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := FromECDSAPub(&p)
 	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
 }
