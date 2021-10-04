@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"math/big"
 	"fmt"
 	"github.com/fgeth/fg/common"
 	"github.com/fgeth/fg/crypto"
@@ -12,19 +14,19 @@ const (
 
 )
 
-func createKey() *ecdsa.PrivateKey, error {
+func createKey() (*ecdsa.PrivateKey, error) {
 	return crypto.GenerateKey()
 
 }
 
-function verifyHash(hash common.Hash, r big.Int, s big.Int, pubKey PublicKey){
+func verifyHash(hash common.Hash, r *big.Int, s *big.Int, pubKey *ecdsa.PublicKey) string{
 response :=""
-if crypto.Verify(hash , r,  s, pubKey) {
+if crypto.Verify(hash , r,  s, *pubKey) {
 		response = "Hash was signed by prvtKey"
 	}else{
 		response = "Hash was not signed by prvtKey"
 	}
-return responnse
+return response
 
 }
 
@@ -33,14 +35,14 @@ func main() {
 	//Test to see if we can get an ECDSA PrivateKey generated
 	prvKey, err := createKey()
 	
-	if err !:=nil{
+	if err !=nil{
 		fmt.Println("Could not generate PrivateKey")
 	}else{
 		fmt.Println("PrivateKey Created.")
 	}
 	prvKey2, err := createKey()
 	
-	if err !:=nil{
+	if err !=nil{
 		fmt.Println("Could not generate PrivateKey2")
 	}else{
 		fmt.Println("PrivateKey2 Created.")
@@ -48,20 +50,20 @@ func main() {
 	
 	
 	//Create New Keccak State
-	khState := NewKeccakState()
+	khState := crypto.NewKeccakState()
 	
 	//Generate Hash
-	hash := HashData(khState, []byte(plainText))
+	hash := crypto.HashData(khState, []byte(plainText))
 	
 	//Sign Hash returns 2 big.Ints
-	r, s, err  := crypto.Sign(hash, prvKey )
+	r, s, err  := crypto.Sign(hash, *prvKey )
 	if err !=nil{
 		fmt.Println("Error Signing Hash with prvKey")
 	}else{
 		fmt.Println("Signed Hash with prvKey")
 	}
 	
-	t, u, err  := crypto.Sign(hash, prvKey2 )
+	t, u, err  := crypto.Sign(hash, *prvKey2 )
 	if err !=nil{
 		fmt.Println("Error Signing Hash with prvKey2")
 	}else{
@@ -69,11 +71,11 @@ func main() {
 	}
 	
 	//Response should be valid that the private key signed the hash
-	response := verifyHash(hash , r,  s, prvKey.PublicKey)
+	response := verifyHash(hash , r,  s, &prvKey.PublicKey)
 	fmt.Println(response)
 	
 	//Response should be invalid the private key did not sign the hash
-	response := verifyHash(hash , t,  u, prvKey.PublicKey)
+	response = verifyHash(hash , t,  u, &prvKey.PublicKey)
 	fmt.Println(response)
 	
 	
