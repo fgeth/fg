@@ -9,7 +9,7 @@ import (
 )
 
 func main(){
-	   prvKey, err := crypto.GenerateKey
+	   prvKey := crypto.GenerateKey
 	   if err !=nil{
 			fmt.Println("Could not generate PrivateKey")
 		}else{
@@ -23,7 +23,7 @@ func main(){
 	
 		//Generate Hash
 		hash := crypto.HashData(khState, []byte(plainText))
-		fmt.Printf(hash)
+		fmt.Printf(string(hash))
 		
 		
 	   if err := http.ListenAndServe(":69420", nil); err != nil {
