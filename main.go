@@ -9,11 +9,11 @@ import (
 )
 
 func main(){
-	   prvKey := crypto.GenerateKey
+	  // prvKey := crypto.GenerateKey
 	   
-		plainText := "Starting server for testing HTTP POST...\n"
+		//plainText := "Starting server for testing HTTP POST...\n"
 		
-		fmt.Printf(plainText)
+		//fmt.Printf(plainText)
 		//Create New Keccak State
 		//khState := crypto.NewKeccakState()
 	
