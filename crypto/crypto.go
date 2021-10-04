@@ -34,7 +34,7 @@ const (
 
 
 
-func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (big.Int, big.Int, error)
+func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (big.Int, big.Int, error){
 	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
 	if err != nil {
 		panic(err)
