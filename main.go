@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
-	"github.com/fgeth/fg/common"
 	"github.com/fgeth/fg/crypto"
 
 )
 
 func main(){
-	   prvKey, err := createKey()
+	   prvKey, err := crypto.GenerateKey
 	   if err !=nil{
 			fmt.Println("Could not generate PrivateKey")
 		}else{
@@ -19,10 +19,10 @@ func main(){
 		
 		fmt.Printf(plainText)
 		//Create New Keccak State
-		khState := NewKeccakState()
+		khState := crypto.NewKeccakState()
 	
 		//Generate Hash
-		hash := HashData(khState, []byte(plainText))
+		hash := crypto.HashData(khState, []byte(plainText))
 		fmt.Printf(hash)
 		
 		
