@@ -10,20 +10,16 @@ import (
 
 func main(){
 	   prvKey := crypto.GenerateKey
-	   if err !=nil{
-			fmt.Println("Could not generate PrivateKey")
-		}else{
-			fmt.Println("PrivateKey Created.")
-		}
+	   
 		plainText := "Starting server for testing HTTP POST...\n"
 		
 		fmt.Printf(plainText)
 		//Create New Keccak State
-		khState := crypto.NewKeccakState()
+		//khState := crypto.NewKeccakState()
 	
 		//Generate Hash
-		hash := crypto.HashData(khState, []byte(plainText))
-		fmt.Printf(string(hash))
+		//hash := crypto.HashData(khState, []byte(plainText))
+		//fmt.Printf(string(hash))
 		
 		
 	   if err := http.ListenAndServe(":69420", nil); err != nil {
