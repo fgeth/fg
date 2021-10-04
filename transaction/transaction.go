@@ -40,7 +40,16 @@ type Transaction struct {
 
 }
 
+type Transactions struct{ 
+	ChainID		  uint
+	Transactions  map[uint64]Transaction  // Map of all Transactions for the Year by TxHash
 
+}
+
+type TransactionPool struct{
+   Txs			[]Transaction
+   NextNumber	uint64
+}
 
 
 func createTxPool() TransactionPool{

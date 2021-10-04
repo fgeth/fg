@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"hash"
+	"github.com/google/uuid"
 )
 
 const (
@@ -42,16 +43,7 @@ type Signer struct {
 	R				big.Int
 	S				big.Int
 }
-type Transactions struct{ 
-	ChainID		  uint
-	Transactions  map[uint64]Transaction  // Map of all Transactions for the Year by TxHash
 
-}
-
-type TransactionPool struct{
-   Txs			[]Transaction
-   NextNumber	uint64
-}
 
 
 type Key struct {
@@ -64,7 +56,7 @@ type Key struct {
 }
 
 type encryptedKeyJSONV3 struct {
-	Address Address     `json:"address"`
+	Address Address             `json:"address"`
 	Crypto  CryptoJSON 			`json:"crypto"`
 	Id      string     			`json:"id"`
 	Version int       			`json:"version"`
