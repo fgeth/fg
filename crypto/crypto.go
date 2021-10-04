@@ -115,125 +115,34 @@ func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
 }
 
 
-func (k *Key) MarshalJSON() (j []byte, err error) {
-	jStruct := plainKeyJSON{
-		hex.EncodeToString(k.Address[:]),
-		hex.EncodeToString(FromECDSA(k.PrivateKey)),
-		k.Id.String(),
-		version,
-	}
-	j, err = json.Marshal(jStruct)
-	return j, err
+
+func encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
+    x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
+    pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+
+    x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+    pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+
+    return string(pemEncoded), string(pemEncodedPub)
 }
 
-func (k *Key) UnmarshalJSON(j []byte) (err error) {
-	keyJSON := new(plainKeyJSON)
-	err = json.Unmarshal(j, &keyJSON)
-	if err != nil {
-		return err
-	}
+func decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
+    block, _ := pem.Decode([]byte(pemEncoded))
+    x509Encoded := block.Bytes
+    privateKey, _ := x509.ParseECPrivateKey(x509Encoded)
 
-	u := new(uuid.UUID)
-	*u, err = uuid.Parse(keyJSON.Id)
-	if err != nil {
-		return err
-	}
-	k.Id = *u
-	addr, err := hex.DecodeString(keyJSON.Address)
-	if err != nil {
-		return err
-	}
-	privkey, err := HexToECDSA(keyJSON.PrivateKey)
-	if err != nil {
-		return err
-	}
-	k.Address = BytesToAddress(addr)
-	
-	k.PrivateKey = privkey
+    blockPub, _ := pem.Decode([]byte(pemEncodedPub))
+    x509EncodedPub := blockPub.Bytes
+    genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
+    publicKey := genericPublicKey.(*ecdsa.PublicKey)
 
-	return nil
+    return privateKey, publicKey
 }
 
 
-// SaveECDSA saves a secp256k1 private key to the given file with
-// restrictive permissions. The key data is saved hex-encoded.
-func SaveECDSA(file string, key *ecdsa.PrivateKey) error {
-	k := hex.EncodeToString(FromECDSA(key))
-	return ioutil.WriteFile(file, []byte(k), 0600)
-}
 
 
-// FromECDSA exports a private key into a binary dump.
-func FromECDSA(priv *ecdsa.PrivateKey) []byte {
-	if priv == nil {
-		return nil
-	}
-	return math.PaddedBigBytes(priv.D, priv.Params().BitSize/8)
-}
-// HexToECDSA parses a secp256k1 private key.
-func HexToECDSA(hexkey string) (*ecdsa.PrivateKey, error) {
-	b, err := hex.DecodeString(hexkey)
-	if byteErr, ok := err.(hex.InvalidByteError); ok {
-		return nil, fmt.Errorf("invalid hex character %q in private key", byte(byteErr))
-	} else if err != nil {
-		return nil, errors.New("invalid hex data for private key")
-	}
-	return ToECDSA(b)
-}
 
-// readASCII reads into 'buf', stopping when the buffer is full or
-// when a non-printable control character is encountered.
-func readASCII(buf []byte, r *bufio.Reader) (n int, err error) {
-	for ; n < len(buf); n++ {
-		buf[n], err = r.ReadByte()
-		switch {
-		case err == io.EOF || buf[n] < '!':
-			return n, nil
-		case err != nil:
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-// checkKeyFileEnd skips over additional newlines at the end of a key file.
-func checkKeyFileEnd(r *bufio.Reader) error {
-	for i := 0; ; i++ {
-		b, err := r.ReadByte()
-		switch {
-		case err == io.EOF:
-			return nil
-		case err != nil:
-			return err
-		case b != '\n' && b != '\r':
-			return fmt.Errorf("invalid character %q at end of key file", b)
-		case i >= 2:
-			return errors.New("key file too long, want 64 hex characters")
-		}
-	}
-}
-// LoadECDSA loads a secp256k1 private key from the given file.
-func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
-	fd, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-
-	r := bufio.NewReader(fd)
-	buf := make([]byte, 64)
-	n, err := readASCII(buf, r)
-	if err != nil {
-		return nil, err
-	} else if n != len(buf) {
-		return nil, fmt.Errorf("key file too short, want 64 hex characters")
-	}
-	if err := checkKeyFileEnd(r); err != nil {
-		return nil, err
-	}
-
-	return HexToECDSA(string(buf))
-}
 
 func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 	// Create the keystore directory with appropriate permissions
@@ -380,16 +289,6 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	}, nil
 }
 
-func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
-	if pub == nil || pub.X == nil || pub.Y == nil {
-		return nil
-	}
-	return elliptic.Marshal(S256(), pub.X, pub.Y)
-}
-func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
-	pubBytes := FromECDSAPub(&p)
-	return common.BytesToAddress(Keccak256(pubBytes[1:])[12:])
-}
 
 func DecryptDataV3(cryptoJson CryptoJSON, auth string) ([]byte, error) {
 	if cryptoJson.Cipher != "aes-128-ctr" {
