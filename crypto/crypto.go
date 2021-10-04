@@ -172,7 +172,7 @@ func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 func StoreKey ( key *ecdsa.PrivateKey, auth string) error{
 prvKey, PubKey := encode(key, key.PublicKey)
 
-keyjson, err := Encrypt([]byte auth, prvKey)
+keyjson, err := Encrypt([]byte(auth), prvKey)
 	if err != nil {
 		return err
 	}
