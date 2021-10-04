@@ -217,7 +217,7 @@ func Encrypt(key, data []byte) ([]byte, error) {
     ciphertext = append(ciphertext, salt...)
     return ciphertext, nil
 }
-func Decrypt(key, data []byte) ([]byte, error) {
+func Decrypt(key, data []byte) (string, error) {
     salt, data := data[len(data)-32:], data[:len(data)-32]
     key, _, err := DeriveKey(key, salt)
     if err != nil {
@@ -236,7 +236,7 @@ func Decrypt(key, data []byte) ([]byte, error) {
     if err != nil {
         return nil, err
     }
-    return plaintext, nil
+    return string(plaintext), nil
 }
 func DeriveKey(password, salt []byte) ([]byte, []byte, error) {
     if salt == nil {
