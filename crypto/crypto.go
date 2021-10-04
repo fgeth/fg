@@ -181,7 +181,7 @@ keyjson, err := Encrypt([]byte(auth), []byte(prvKey))
 	return err
 }
 
-func GetKey(filename, auth string) (*ecdsa.PrivateKey, error) {
+func GetKey(filename, auth string) (*ecdsa.PrivateKey,*ecdsa.PublicKey, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -194,7 +194,7 @@ func GetKey(filename, auth string) (*ecdsa.PrivateKey, error) {
 	prvKey, pubKey := decode(key,filename)
 	// Make sure we're really operating on the requested key (no swap attacks)
 	
-	return prvKey, nil
+	return prvKey, pubKey, nil
 }
 func Encrypt(key, data []byte) ([]byte, error) {
     key, salt, err := DeriveKey(key, nil)
