@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -43,7 +42,7 @@ func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (big.Int, big.Int, error){
 
 }
 
-func Verify(hash common.Hash, r big.Int, s big.Int, pubKey PublicKey) bool{
+func Verify(hash common.Hash, r big.Int, s big.Int, pubKey ecdsa.PublicKey) bool{
 	return ecdsa.Verify(pubKey, hash[:], r, s) 
 
 }
@@ -57,18 +56,18 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 
 // NewKeccakState creates a new KeccakState
 func NewKeccakState() KeccakState {
-	return sha3.NewLegacyKeccak256().(KeccakState)
+	return sha3.NewLegacyKeccak256().(common.KeccakState)
 }
 
 // HashData hashes the provided data using the KeccakState and returns a 32 byte hash
-func HashData(kh KeccakState, data []byte) (h common.Hash) {
+func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
 	kh.Reset()
 	kh.Write(data)
 	kh.Read(h[:])
 	return h
 }
 
-func (k *Key) MarshalJSON() (j []byte, err error) {
+func (k *common.Key) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
 		hex.EncodeToString(k.Address[:]),
 		hex.EncodeToString(crypto.FromECDSA(k.PrivateKey)),
@@ -79,7 +78,7 @@ func (k *Key) MarshalJSON() (j []byte, err error) {
 	return j, err
 }
 
-func (k *Key) UnmarshalJSON(j []byte) (err error) {
+func (k *common.Key) UnmarshalJSON(j []byte) (err error) {
 	keyJSON := new(plainKeyJSON)
 	err = json.Unmarshal(j, &keyJSON)
 	if err != nil {
@@ -108,7 +107,7 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 }
 // BytesToAddress returns Address with value b.
 // If b is larger than len(h), b will be cropped from the left.
-func BytesToAddress(b []byte) Address {
+func BytesToAddress(b []byte) common.Address {
 	var a Address
 	a.SetBytes(b)
 	return a
@@ -220,7 +219,7 @@ func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 }
 
 
-func StoreKey (fileName string, key *Key, auth string) error{
+func StoreKey (fileName string, key *common.Key, auth string) error{
 keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
@@ -229,7 +228,7 @@ keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	os.Rename(tmpName, fileName)
 }
 
-func GetKey(addr string, filename, auth string) (*Key, error) {
+func GetKey(addr string, filename, auth string) (*common.Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -248,7 +247,7 @@ func GetKey(addr string, filename, auth string) (*Key, error) {
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
-func EncryptKey(key *Key, auth string ) ([]byte, error) {
+func EncryptKey(key *common.Key, auth string ) ([]byte, error) {
 	keyBytes := math.PaddedBigBytes(key.PrivateKey.D, 32)
 	cryptoStruct, err := EncryptDataV3(keyBytes, []byte(auth), scryptN, scryptP)
 	if err != nil {
