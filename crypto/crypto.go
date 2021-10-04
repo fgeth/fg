@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"path/filepath"
 	"os"
@@ -28,6 +29,10 @@ const (
 	
 	//Crypto Version
 	version = 1
+
+	secp256k1N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
+	secp256k1halfN = new(big.Int).Div(secp256k1N, big.NewInt(2))
+
 	
 
 )
@@ -105,15 +110,12 @@ func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
 	kh.Read(h[:])
 	return h
 }
-// S256 returns an instance of the secp256k1 curve.
-func S256() elliptic.Curve {
-	return secp256k1.S256()
-}
+
 
 func (k *Key) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
 		hex.EncodeToString(k.Address[:]),
-		hex.EncodeToString(crypto.FromECDSA(k.PrivateKey)),
+		hex.EncodeToString(FromECDSA(k.PrivateKey)),
 		k.Id.String(),
 		version,
 	}
@@ -151,7 +153,7 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 // BytesToAddress returns Address with value b.
 // If b is larger than len(h), b will be cropped from the left.
 func BytesToAddress(b []byte) common.Address {
-	var a Address
+	var a common.Address
 	a.SetBytes(b)
 	return a
 }
@@ -216,6 +218,37 @@ func HexToECDSA(hexkey string) (*ecdsa.PrivateKey, error) {
 	return ToECDSA(b)
 }
 
+// readASCII reads into 'buf', stopping when the buffer is full or
+// when a non-printable control character is encountered.
+func readASCII(buf []byte, r *bufio.Reader) (n int, err error) {
+	for ; n < len(buf); n++ {
+		buf[n], err = r.ReadByte()
+		switch {
+		case err == io.EOF || buf[n] < '!':
+			return n, nil
+		case err != nil:
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+// checkKeyFileEnd skips over additional newlines at the end of a key file.
+func checkKeyFileEnd(r *bufio.Reader) error {
+	for i := 0; ; i++ {
+		b, err := r.ReadByte()
+		switch {
+		case err == io.EOF:
+			return nil
+		case err != nil:
+			return err
+		case b != '\n' && b != '\r':
+			return fmt.Errorf("invalid character %q at end of key file", b)
+		case i >= 2:
+			return errors.New("key file too long, want 64 hex characters")
+		}
+	}
+}
 // LoadECDSA loads a secp256k1 private key from the given file.
 func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 	fd, err := os.Open(file)
