@@ -15,6 +15,7 @@ import (
 	"os"
 	"github.com/fgeth/fg/common"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/sha3"
 )
 const (
 	// StandardScryptN is the N parameter of Scrypt encryption algorithm, using 256MB
@@ -35,7 +36,7 @@ const (
 type Key struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
 	// to simplify lookups we also store the address
-	Address Address
+	Address common.Address
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
@@ -43,7 +44,7 @@ type Key struct {
 
 
 type encryptedKeyJSONV3 struct {
-	Address Address             `json:"address"`
+	Address common.Address      `json:"address"`
 	Crypto  CryptoJSON 			`json:"crypto"`
 	Id      string     			`json:"id"`
 	Version int       			`json:"version"`
@@ -62,10 +63,17 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
+type plainKeyJSON struct {
+	Address    string `json:"address"`
+	PrivateKey string `json:"privatekey"`
+	Id         string `json:"id"`
+	Version    int    `json:"version"`
+}
 
 
-func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (*big.Int, big.Int, error){
-	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
+
+func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (*big.Int, *big.Int, error){
+	r, s, err := ecdsa.Sign(rand.Reader, &prvKey, hash[:])
 	if err != nil {
 		panic(err)
 	}
@@ -73,15 +81,15 @@ func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (*big.Int, big.Int, error)
 
 }
 
-func Verify(hash common.Hash, r big.Int, s big.Int, pubKey ecdsa.PublicKey) bool{
-	return ecdsa.Verify(pubKey, hash[:], r, s) 
+func Verify(hash common.Hash, r *big.Int, s *big.Int, pubKey ecdsa.PublicKey) bool{
+	return ecdsa.Verify(&pubKey, hash[:], r, s) 
 
 }
 
 
 // GenerateKey generates a new private key.
 func GenerateKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(S256(), rand.Reader)
+	return ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 }
 
 
@@ -96,6 +104,10 @@ func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
 	kh.Write(data)
 	kh.Read(h[:])
 	return h
+}
+// S256 returns an instance of the secp256k1 curve.
+func S256() elliptic.Curve {
+	return secp256k1.S256()
 }
 
 func (k *Key) MarshalJSON() (j []byte, err error) {
