@@ -196,8 +196,8 @@ func GetKey(filename, auth string) (*ecdsa.PrivateKey,*ecdsa.PublicKey, error) {
 	
 	return prvKey, pubKey, nil
 }
-func Encrypt(key, data []byte) ([]byte, error) {
-    key, salt, err := DeriveKey(key, nil)
+func Encrypt(password, data []byte) ([]byte, error) {
+    key, salt, err := DeriveKey(password, nil)
     if err != nil {
         return nil, err
     }

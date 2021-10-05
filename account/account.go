@@ -10,14 +10,16 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/fgeth/fg/common"
+	"github.com/fgeth/fg/crypto"
 	"github.com/fgeth/fg/block"
 
 )
 
 type Account struct {
-	Address				string
-	Key					PrvKey
-	Balance				big.Int					// Value of the account at the completion of the latest Block if Block 3 was just completed this is the value after all transactions have been completed in Block 3
+	Address				string					//Public key as string
+	PrvKey				[]byte					//Encrypted private key
+	PubKey				*ecdsa.PublicKey					
+	Balance				big.Int					//Value of the account at the completion of the latest Block if Block 3 was just completed this is the value after all transactions have been completed in Block 3
 	Pending				big.Int					//Amount after any known Transactions
 	TxNumber			uint64					//Number of transactions sent from this account
 	BlockNumber			uint64					//Block Number of the last Known completed Block
@@ -40,18 +42,37 @@ type ValidationReward struct{
 	PubKey			*ecdsa.PublicKey			
 }
 
-func NewAccount(password string) Account{
+func NewAccount(password string, blockNumber uint64) Account{
+ prvKey, err := createKey()
+ pubKey := &prvKey.PublicKey
 
+ privateKey, publicKey :=Encode(prvKey, pubKey)
+ keyjson, err := Encrypt([]byte(password), []byte(privateKey))
+	if err != nil {
+		return err
+	}
+	balance := new big.Int(0)
+	
+	return account := new Account{publicKey, privateKey, pubKey, balance, balance, blockNumber} 
 
 }
 
 func SaveAccountToDisk(account Account){
-
+	fileName := account.Address
+   file, _ := json.MarshalIndent(account, "", " ")
+ 
+	_ = ioutil.WriteFile(fileName, file, 0644)
 
 }
 
-func LoadAccountFromDisk(address string){
+func LoadAccountFromDisk(address string) Account{
 
+file, _ := ioutil.ReadFile(address)
+ 
+	account := Account{}
+ 
+	_ = json.Unmarshal([]byte(file), &account)
 
+	return account
 }
 

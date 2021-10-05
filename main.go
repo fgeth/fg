@@ -22,7 +22,7 @@ func main(){
 		//fmt.Printf(string(hash))
 		
 		
-	   if err := http.ListenAndServe(":69420", nil); err != nil {
+	   if err := http.ListenAndServe(":42069", nil); err != nil {
 	    	log.Fatal(err)
 	   }
 }
