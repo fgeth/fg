@@ -118,7 +118,7 @@ func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
 
 
 
-func encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
+func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
     x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
     pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
 
@@ -128,7 +128,7 @@ func encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, s
     return string(pemEncoded), string(pemEncodedPub)
 }
 
-func decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
+func Decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
     block, _ := pem.Decode([]byte(pemEncoded))
     x509Encoded := block.Bytes
     privateKey, _ := x509.ParseECPrivateKey(x509Encoded)
@@ -170,7 +170,7 @@ func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
 
 
 func StoreKey ( key *ecdsa.PrivateKey, auth string) error{
-prvKey, PubKey := encode(key, &key.PublicKey)
+prvKey, PubKey := Encode(key, &key.PublicKey)
 
 keyjson, err := Encrypt([]byte(auth), []byte(prvKey))
 	if err != nil {
@@ -191,7 +191,7 @@ func GetKey(filename, auth string) (*ecdsa.PrivateKey,*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	prvKey, pubKey := decode(key,filename)
+	prvKey, pubKey := Decode(key,filename)
 	// Make sure we're really operating on the requested key (no swap attacks)
 	
 	return prvKey, pubKey, nil
