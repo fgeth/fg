@@ -26,6 +26,7 @@ type Transaction struct {
 	From				address
 	To					address
 	Value				big.Int
+	TxNumber			uint64						//The senders total number of sent transactions to this point including this transaction
 	FVB					big.Int						//From Account Balance Value Before Transaction
 	TVB					big.Int						//To Account Balance Value Before Transaction
 	FVA					big.Int						//From Account Balance Value After Transaction
@@ -74,4 +75,14 @@ func sendTransaction(to Common.Address, from Common.Address, amount big.Int, key
 			return "Error not enough FGEs have " + fromBalance.String() +" Need "+amount.String()
 			
 		}
+}
+
+func SaveTransactionToDisk(tx Transaction){
+
+
+}
+
+func LoadTransactionFromDisk(hash uint64){
+
+
 }

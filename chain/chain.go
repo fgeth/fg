@@ -47,3 +47,13 @@ func(chain *Chain) GetBlockHash2(){
 func (chain *Chain)GetBlockHash3(){
 	eturn chain.hash[chain.BlockNumber-2]
 }
+
+func SaveChainToDisk(chain Chain){
+
+
+}
+
+func LoadChainFromDisk(chainId uint){
+
+
+}

@@ -24,7 +24,7 @@ type Node struct {
 	Ips				string
 	Port			string
 	Url				string
-	PubKey			PublicKey
+	PubKey			*ecdsa.PublicKey
 	Ids				[]unitptr				//Array used to get Nodes New Nodes are appended to Array Once added Nodes are never removed
 	Nodes			map[unitptr]Node		//Map index is the Node ID the unitptr hash of the Nodes IP
 	Chain			map[uint]Chain			//Map index is Chainid i.e. the year the chain was created

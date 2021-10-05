@@ -24,12 +24,7 @@ type Address [AddressLength]byte
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
 
-type BlockData struct {
-	Year				uint					   //The year this data is valid for	
-	Balance				map[uint64]big.Int		  //Map index is Block Number and the associated value of the account at that Block Number. History[3] would show the value of the account at the end of Block 2 and to include any of block 3 transactions
-	Confirmations		map[uint64][]SignedTx	  //Map index is Block Number and the associated cofirmations of the account Balance at this height	
-	EBLY				map[uint]big.Int		  //The Ending balance of past years with the map index equal to the year
-}
+
 
 
 type SignedTx struct {
