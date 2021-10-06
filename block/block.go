@@ -16,7 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	 "os"
-	 "github.com/fgeth/fge/crypto"
+	 "github.com/fgeth/fg/crypto"
 )
 
 type Block struct {
