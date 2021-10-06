@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"github.com/fgeth/fg/common"
 	"github.com/fgeth/fg/crypto"
 	"github.com/fgeth/fg/block"

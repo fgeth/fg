@@ -9,6 +9,7 @@ import (
     //"crypto/sha256"
 	"crypto/x509"
     "encoding/pem"
+	"encoding/binary"
 	//"encoding/hex"
 	//"encoding/json"
     //"fmt"
@@ -82,8 +83,8 @@ type plainKeyJSON struct {
 
 
 
-func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (*big.Int, *big.Int, error){
-	r, s, err := ecdsa.Sign(rand.Reader, &prvKey, hash[:])
+func Sign(hash common.Hash, prvKey *ecdsa.PrivateKey ) (*big.Int, *big.Int, error){
+	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
 	if err != nil {
 		panic(err)
 	}
@@ -91,8 +92,8 @@ func Sign(hash common.Hash, prvKey ecdsa.PrivateKey ) (*big.Int, *big.Int, error
 
 }
 
-func Verify(hash common.Hash, r *big.Int, s *big.Int, pubKey ecdsa.PublicKey) bool{
-	return ecdsa.Verify(&pubKey, hash[:], r, s) 
+func Verify(hash common.Hash, r *big.Int, s *big.Int, pubKey *ecdsa.PublicKey) bool{
+	return ecdsa.Verify(pubKey, hash[:], r, s) 
 
 }
 
@@ -116,6 +117,15 @@ func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
 	return h
 }
 
+func HashToUint64(h common.Hash) uint64{
+	data := []byte{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+	for i:=0; i< len(h); i++{
+		data[i] =h[i]	
+	}
+	theHashAsUint64 := binary.BigEndian.Uint64(data)
+
+
+}
 
 
 func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {

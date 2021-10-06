@@ -24,6 +24,7 @@ type Node struct {
 	Ips				string
 	Port			string
 	Url				string
+	Year			uint
 	PubKey			*ecdsa.PublicKey
 	Ids				[]unitptr				//Array used to get Nodes New Nodes are appended to Array Once added Nodes are never removed
 	Nodes			map[unitptr]Node		//Map index is the Node ID the unitptr hash of the Nodes IP
@@ -41,4 +42,44 @@ func hashKey(s string) uintptr {
 	}
 	buf := *(*[]byte)(unsafe.Pointer(&bh))
 	return uintptr(siphash.Hash(sipHashKey1, sipHashKey2, buf))
+}
+
+func (node *Node) VerifyBlockHash(block *Block) bool {
+	return block.VerifyBlockHash()
+
+}
+
+func (node *Node) VerifyBlockSignature(block *Block) bool{
+	if node.VerifyBlockHash(block) {
+		if block.Signer.PubKey == node.Nodes[block.Signer.NodeId].PubKey{
+			return block.VerifyBlockSignature()
+		}
+	}
+	return false
+}
+
+func (node *Node) AddNewBlock(block Block
+	for i: writer range node.Chain[node.Year].Writers{
+		if block.Signer.NodeId == writer{
+			AuthorizedWriter = block.Signer.NodeId == writer
+		}
+	}
+	if AuthorizedWriter {
+		if node.VerifyBlockSignature(block){
+			if node.Chain[node.Year].Blocks[block.BlockNumber-1].BlockHash == block.PBHash{
+				node.Chain[node.Year].Blocks[block.BlockNumber] := block
+				node.Chain[node.Year].BlockNumber = block.BlockNumber
+				node.Chain[node.Year].Writers = block.Writers
+				return "Added New Block"
+			}
+			return "Error adding new Block Previous Block Hash does not Match"
+		}	
+		return "Error adding new Block could not verify Hash and signature"
+	}
+	return "Not Authorized To Write To The Chain"
+}
+
+func (node *Node) StartNewChain(year uint){
+	node.Chain[year]
+
 }

@@ -1,18 +1,9 @@
 package block
 
 import (
-	"crypto/ecdsa"
-    "crypto/sha1"
-	"fmt"
-	"io/ioutil"
-	"flag"
-	"log"
-	"bufio"
-	"hash"
-	"math/big"
-	"sync"
 	"time"
 	"encoding/json"
+	"math/big"
 	"net/http"
 	"net/url"
 	 "os"
@@ -20,26 +11,79 @@ import (
 )
 
 type Block struct {
-	BlockNumber			uint64
-	Txs					[]transaction	   		//Array with completed transactions
-	PTxs				[]transaction			//Array of pending transactions
-	Nodes				string					//Comma seperated list of all New Nodes IPS on network in Node order
-	RmNodes				string					//Comma seperated list of all nodes that did not respond during this Block Nodes start at its Node Array index and goes through array
-	PBHash				uint64					//Hash of previous Block
-	NBLNode				string					//IP of the Next Block Node Leader based on Block Hash
-	NBNodes				string					//Comma Seperated list of the remaining Block Nodes IPS  Based on Block Hash
-	BlockHash			uint64					//Hash of this Block including previous Blocks Hash & list of new Nodes and Nodes to remove
-	ChainHash			uint64					//Hash of all the Block hashes up to this point for this chain includes this BlockHash
-	Signers				[]SignedTx				//Signature of Block Nodes
+	ChainId				uint					//Year of Block
+	BlockNumber			uint64					//Block Number
+	Txs					string			   		//Json of completed transactions
+	PTxs				string					//Json of pending transactions
+	//Nodes				string					//Comma seperated list of all New Nodes IPS on network in Node order
+	//RmNodes			string					//Comma seperated list of all nodes that did not respond during this Block Nodes start at its Node Array index and goes through array
+	PBHash				common.Hash				//Hash of previous Block
+	NBLNode				untptr					//ID of the Next Block Node Leader based on Block Hash
+	Writers				[]untptr				//array of the Block Nodes untptr  Based on Block Hash includes Leader
+	BlockHash			common.Hash				//Hash of this Block including previous Blocks Hash & list of new Nodes and Nodes to remove
+	ChainHash			common.Hash				//Hash of all the Block hashes up to this point for this chain includes this BlockHash
+	Signer				SignedBlock				//Signature of Block Nodes
 }
 
 
+type SignedBlock struct {
+	R			big.Int
+	S			big.Int
+	PubKey		*ecdsa.PublicKey
+	NodeId		uintptr
 
+}
 
-func CreateBlock(chain Chain) Block{
-	hash := getHash(chain.GetNextBlock(), GetTxs(), GetNodes, chain.GetLastBlock)
-	block := Block {chain.GetNextBlock(), GetTxs(), chain.GetBlockHash1(), chain.GetBlockHash2(), chain.GetBlockHash3(), hash}
+func CreateBlock(chainId uint, blockNumber unit64, txs string, pTxs string, pBlockHash uint64 ) Block{
+
+	block := Block {chainId, blockNumber, txs, pTxs, pBlockHash}
 	return block
+}
+
+func (block *Block, prvKey *ecdsa.PrivateKey, nodeId uintptr ) SignBlock() Block{
+	kh := NewKeccakState()
+	
+	data, _ := json.Marshal(block)
+	h := HashData(kh , []byte(data))
+	
+	block.BlockHash := h
+	
+	r, s, err := Sign(h, prvKey )
+	
+	pubKey := prvKey.PublicKey()
+	signBlock := SignedBlock{r,s,pubKey, nodeId}
+	
+	block.Signer := signBlock
+	
+	return block
+}
+func (block *Block) GetUnsignedBlock()  *Block{
+
+	checkBlock :=Block{}
+	checkBlock.ChainId := block.ChainId
+	checkBlock.BlockNumber := block.BlockNumber
+	checkBlock.Txs := block.Txs
+	checkBlock.PTxs := block.PTxs
+	checkBlock.PBHash := block.PBHash
+	checkBlock.NBLNode := block.NBLNode
+	checkBlock.NBNodes := block.NBNodes
+	checkBlock.NBLNode := block.NBLNode
+	return checkBlock
+}
+
+
+func (block *Block) VerifyBlockHash() bool{
+	
+	kh := NewKeccakState()
+	
+	data, _ := json.Marshal(block.GetUnsignedBlock())
+	h := HashData(kh , []byte(data))
+	return block.BlockHash == h
+}
+
+func (block *Block ) VerifyBlockSignature() bool{
+	return verifyHash(block.Hash, block.Signer.R,  block.Signer.S, block.PubKey)
+
 }
 
 func SaveBlockToDisk(block Block){
