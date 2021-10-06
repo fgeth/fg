@@ -122,8 +122,8 @@ func HashToUint64(h common.Hash) uint64{
 	for i:=0; i< len(h); i++{
 		data[i] =h[i]	
 	}
-	return theHashAsUint64 := binary.BigEndian.Uint64(data)
-		
+	theHashAsUint64 := binary.BigEndian.Uint64(data)
+	return theHashAsUint64	
 
 }
 
