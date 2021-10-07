@@ -11,18 +11,20 @@ import (
 )
 
 type Block struct {
-	ChainId				uint					//Year of Block
-	BlockNumber			uint64					//Block Number
-	Txs					string			   		//Json of completed transactions
-	PTxs				string					//Json of pending transactions
-	//Nodes				string					//Comma seperated list of all New Nodes IPS on network in Node order
-	//RmNodes			string					//Comma seperated list of all nodes that did not respond during this Block Nodes start at its Node Array index and goes through array
-	PBHash				common.Hash				//Hash of previous Block
-	NBLNode				untptr					//ID of the Next Block Node Leader based on Block Hash
-	Writers				[]untptr				//array of the Block Nodes untptr  Based on Block Hash includes Leader
-	BlockHash			common.Hash				//Hash of this Block including previous Blocks Hash & list of new Nodes and Nodes to remove
-	ChainHash			common.Hash				//Hash of all the Block hashes up to this point for this chain includes this BlockHash
-	Signer				SignedBlock				//Signature of Block Nodes
+	ChainId				uint						//Year of Block
+	BlockNumber			uint64						//Block Number
+	Txs					[]Transaction	   			//Array of Completed Transactions
+	RTxs				[]Transaction				//Array of Rejected Transactions
+	PTxs				[]Transaction				//array of Pending transactions
+	//Nodes				string						//Comma seperated list of all New Nodes IPS on network in Node order
+	//RmNodes			string						//Comma seperated list of all nodes that did not respond during this Block Nodes start at its Node Array index and goes through array
+	PBHash				common.Hash					//Hash of previous Block
+	NBLNode				untptr						//ID of the Next Block Node Leader based on Block Hash
+	Writers				[]untptr					//array of the Block Nodes untptr  Based on Block Hash includes Leader
+	BlockHash			common.Hash					//Hash of this Block including previous Blocks Hash & list of new Nodes and Nodes to remove
+	ChainHash			common.Hash					//Hash of all the Block hashes up to this point for this chain includes this BlockHash
+	Signer				[]SignedBlock				//Signature of Block Nodes
+	
 }
 
 
@@ -34,6 +36,11 @@ type SignedBlock struct {
 
 }
 
+func CreateGenisusBlock(chainId uint, blockNumber unit64, txs string) Block{
+
+	block := Block {chainId, blockNumber, txs, pTxs, pBlockHash}
+	return block
+}
 func CreateBlock(chainId uint, blockNumber unit64, txs string, pTxs string, pBlockHash uint64 ) Block{
 
 	block := Block {chainId, blockNumber, txs, pTxs, pBlockHash}

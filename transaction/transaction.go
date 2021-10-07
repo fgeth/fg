@@ -36,8 +36,8 @@ type Transaction struct {
 	Fee					big.Int
 	Date				time.Time				 	 //UTC time transaction took place tXID Date and time will use server timezone	
 	Signature			SignedTx					 //Signature of Sender
-	TxConfirmation		map[unit64][]SignedTx	 	 //Map is Hash of Transaction and the associated array of verfied signatures of validators	
 	TxHash				uint64
+	Confirmations		[]SignedTx					//Array of Node signatures that have comfirmed this Transaction
 
 }
 
@@ -52,6 +52,11 @@ type TransactionPool struct{
    NextNumber	uint64
 }
 
+type SignedTx struct {
+	R				big.Int
+	S				big.Int
+	Node			uintptr  			//Able to look up Node and get its public key
+}
 
 func createTxPool() TransactionPool{
 	txs := []Transaction

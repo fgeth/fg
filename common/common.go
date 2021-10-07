@@ -27,11 +27,7 @@ type Hash [HashLength]byte
 
 
 
-type SignedTx struct {
-	R				big.Int
-	S				big.Int
-	Node			uintptr  			//Able to look up Node and get its public key
-}
+
 
 type Signer struct {
 	PubKey			ecdsa.PublicKey
