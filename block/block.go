@@ -7,15 +7,13 @@ import (
 	"net/http"
 	"net/url"
 	 "os"
-	 "github.com/fgeth/fg/crypto"
+	 "github.com/fgeth/fg/common"
 )
 
 type Block struct {
 	ChainId				uint						//Year of Block
 	BlockNumber			uint64						//Block Number
-	Txs					[]Transaction	   			//Array of Completed Transactions
-	RTxs				[]Transaction				//Array of Rejected Transactions
-	PTxs				[]Transaction				//array of Pending transactions
+	Txs					[]Transaction	   			//Array of Transactions in utc time order
 	//Nodes				string						//Comma seperated list of all New Nodes IPS on network in Node order
 	//RmNodes			string						//Comma seperated list of all nodes that did not respond during this Block Nodes start at its Node Array index and goes through array
 	PBHash				common.Hash					//Hash of previous Block
@@ -89,7 +87,7 @@ func (block *Block) VerifyBlockHash() bool{
 }
 
 func (block *Block ) VerifyBlockSignature() bool{
-	return verifyHash(block.Hash, block.Signer.R,  block.Signer.S, block.PubKey)
+	return Verify(block.Hash, block.Signer.R,  block.Signer.S, block.PubKey)
 
 }
 

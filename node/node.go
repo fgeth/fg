@@ -29,7 +29,7 @@ type Node struct {
 	Ids				[]unitptr				//Array used to get Nodes New Nodes are appended to Array Once added Nodes are never removed
 	Nodes			map[unitptr]Node		//Map index is the Node ID the unitptr hash of the Nodes IP
 	Chain			map[uint]Chain			//Map index is Chainid i.e. the year the chain was created
-	
+	Accounts		map[string]Account		//Map index is account address and the associated account
 }
 
 
@@ -58,7 +58,7 @@ func (node *Node) VerifyBlockSignature(block *Block) bool{
 	return false
 }
 
-func (node *Node) AddNewBlock(block Block
+func (node *Node) AddNewBlock(block Block)
 	for i: writer range node.Chain[node.Year].Writers{
 		if block.Signer.NodeId == writer{
 			AuthorizedWriter = block.Signer.NodeId == writer
@@ -77,6 +77,15 @@ func (node *Node) AddNewBlock(block Block
 		return "Error adding new Block could not verify Hash and signature"
 	}
 	return "Not Authorized To Write To The Chain"
+}
+
+func (node *Node) VerifyTransactions(block Block){
+	for x:=0; x < len(block.Txs); x++1{
+		
+	
+	
+	}
+
 }
 
 func (node *Node) StartNewChain(year uint){

@@ -26,9 +26,6 @@ type Hash [HashLength]byte
 
 
 
-
-
-
 type Signer struct {
 	PubKey			ecdsa.PublicKey
 	R				big.Int
@@ -41,5 +38,32 @@ type KeccakState interface {
 	hash.Hash
 	Read([]byte) (int, error)
 }
+// NewKeccakState creates a new KeccakState
+func NewKeccakState() common.KeccakState {
+	return sha3.NewLegacyKeccak256().(common.KeccakState)
+}
+
+// HashData hashes the provided data using the KeccakState and returns a 32 byte hash
+func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
+	kh.Reset()
+	kh.Write(data)
+	kh.Read(h[:])
+	return h
+}
 
 
+
+
+func Sign(hash common.Hash, prvKey *ecdsa.PrivateKey ) (*big.Int, *big.Int, error){
+	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
+	if err != nil {
+		panic(err)
+	}
+	return r, s, err
+
+}
+
+func Verify(hash common.Hash, r *big.Int, s *big.Int, pubKey *ecdsa.PublicKey) bool{
+	return ecdsa.Verify(pubKey, hash[:], r, s) 
+
+}

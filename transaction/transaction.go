@@ -1,7 +1,10 @@
 package transaction
 
 import (
-    "crypto/sha1"
+    "crypto/ecdsa"
+	"crypto/sha1"
+	"crypto/x509"
+    "encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"flag"
@@ -27,14 +30,10 @@ type Transaction struct {
 	To					address
 	Value				big.Int
 	TxNumber			uint64						//The senders total number of sent transactions to this point including this transaction
-	FVB					big.Int						//From Account Balance Value Before Transaction
-	TVB					big.Int						//To Account Balance Value Before Transaction
-	FVA					big.Int						//From Account Balance Value After Transaction
-	TVA					big.Int						//To Account Balance Value After Transaction
 	Processor			address
-	State				string						//Sent | Confirming | Confirmed | Balance To Small
+	State				string						//Sent | Confirming | Confirmed | Rejected
 	Fee					big.Int
-	Date				time.Time				 	 //UTC time transaction took place tXID Date and time will use server timezone	
+	Date				time.Time				 	 //UTC time transaction took place TxId Date and time will use server timezone	
 	Signature			SignedTx					 //Signature of Sender
 	TxHash				uint64
 	Confirmations		[]SignedTx					//Array of Node signatures that have comfirmed this Transaction
@@ -53,6 +52,7 @@ type TransactionPool struct{
 }
 
 type SignedTx struct {
+    Accept			bool				//If node accepts this transaction or rejects the transaction
 	R				big.Int
 	S				big.Int
 	Node			uintptr  			//Able to look up Node and get its public key
@@ -90,4 +90,63 @@ func SaveTransactionToDisk(tx Transaction){
 func LoadTransactionFromDisk(hash uint64){
 
 
+}
+func Address2Key(address string) ( *ecdsa.PublicKey) {
+    blockPub, _ := pem.Decode([]byte(address))
+    x509EncodedPub := blockPub.Bytes
+    genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
+    publicKey := genericPublicKey.(*ecdsa.PublicKey)
+
+    return publicKey
+}
+func (Tx *Transaction) VerifySender(){
+	
+}
+func (Tx *Transaction) GetUnsignedTransaction()  *Transaction{
+
+	checkTrans :=Transaction{}
+	checkTrans.From := Tx.From
+	checkTrans.To := Tx.To
+	checkTrans.Value := Tx.Value
+	checkTrans.TxNumber := Tx.TxNumber
+	return checkTrans
+}
+
+func (Tx *Transaction) VerifyTransactionHash() bool{
+	
+	kh := NewKeccakState()
+	
+	data, _ := json.Marshal(Tx.GetUnsignedTransaction())
+	h := HashData(kh , []byte(data))
+	return Tx.TxHash == h
+}
+
+func (node *Node) CompelteTransaction(Tx Transaction){
+	amount := Tx.Value + Tx.Fee
+	node.Accounts[Tx.From].Balance -= amount
+	node.Accounts[Tx.To].Balance += Tx.Value
+}
+func (node *Node ) VerifyTransactionSignatures(Tx Transaction){
+	confirmations :=0
+	rejected :=0
+	for x:=0; x < len(Tx.Confirmations); x +=1{
+		if Verify(Tx.Hash, Tx.Confirmations[x].R,  Tx.Confirmations[x].S, node.Nodes[Tx.Confirmations[x].Node].PubKey){
+			if Tx.Confirmations[x].Accept{
+						confirmations +=1
+			}else{
+					rejected +=1
+			}
+			
+		}
+	}
+	
+	if confirmations/len(node.Ids) > 60/100 {
+		Tx.State = "Confirmed"
+		Node.CompleteTransaction(Tx)
+	}
+	if rejected/len(node.Ids) > 60/100 {
+		Tx.State = "Rejected"
+	}
+	
+	
 }

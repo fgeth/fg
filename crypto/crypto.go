@@ -83,19 +83,7 @@ type plainKeyJSON struct {
 
 
 
-func Sign(hash common.Hash, prvKey *ecdsa.PrivateKey ) (*big.Int, *big.Int, error){
-	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
-	if err != nil {
-		panic(err)
-	}
-	return r, s, err
 
-}
-
-func Verify(hash common.Hash, r *big.Int, s *big.Int, pubKey *ecdsa.PublicKey) bool{
-	return ecdsa.Verify(pubKey, hash[:], r, s) 
-
-}
 
 
 // GenerateKey generates a new private key.
@@ -104,18 +92,7 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 }
 
 
-// NewKeccakState creates a new KeccakState
-func NewKeccakState() common.KeccakState {
-	return sha3.NewLegacyKeccak256().(common.KeccakState)
-}
 
-// HashData hashes the provided data using the KeccakState and returns a 32 byte hash
-func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
-	kh.Reset()
-	kh.Write(data)
-	kh.Read(h[:])
-	return h
-}
 
 func HashToUint64(h common.Hash) uint64{
 	data := []byte{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
@@ -227,9 +204,9 @@ func Encrypt(password, data []byte) ([]byte, error) {
     ciphertext = append(ciphertext, salt...)
     return ciphertext, nil
 }
-func Decrypt(key, data []byte) (string, error) {
+func Decrypt(password, data []byte) (string, error) {
     salt, data := data[len(data)-32:], data[:len(data)-32]
-    key, _, err := DeriveKey(key, salt)
+    key, _, err := DeriveKey(password, salt)
     if err != nil {
         return "", err
     }
