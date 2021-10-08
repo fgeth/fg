@@ -14,12 +14,10 @@ type Block struct {
 	ChainId				uint						//Year of Block
 	BlockNumber			uint64						//Block Number
 	Txs					[]Transaction	   			//Array of Transactions in utc time order
-	//Nodes				string						//Comma seperated list of all New Nodes IPS on network in Node order
-	//RmNodes			string						//Comma seperated list of all nodes that did not respond during this Block Nodes start at its Node Array index and goes through array
+	Nodes				[]uintptr					//This is current list of Nodes that responded to the last Block.  This array is what is used to get BlockNodes. 
 	PBHash				common.Hash					//Hash of previous Block
-	NBLNode				untptr						//ID of the Next Block Node Leader based on Block Hash
-	Writers				[]untptr					//array of the Block Nodes untptr  Based on Block Hash includes Leader
-	BlockHash			common.Hash					//Hash of this Block including previous Blocks Hash & list of new Nodes and Nodes to remove
+	Writers				[]uintptr					//array of the Block Nodes uintptr  Based on Block Hash includes Leader
+	BlockHash			common.Hash					//Hash of this Block which includes previous Blocks Hash & list of Nodes
 	ChainHash			common.Hash					//Hash of all the Block hashes up to this point for this chain includes this BlockHash
 	Signer				[]SignedBlock				//Signature of Block Nodes
 	
@@ -70,12 +68,15 @@ func (block *Block) GetUnsignedBlock()  *Block{
 	checkBlock.Txs := block.Txs
 	checkBlock.PTxs := block.PTxs
 	checkBlock.PBHash := block.PBHash
-	checkBlock.NBLNode := block.NBLNode
-	checkBlock.NBNodes := block.NBNodes
-	checkBlock.NBLNode := block.NBLNode
 	return checkBlock
 }
 
+func (block *Block) BlockHash(){
+	blockData := block.GetUnsignedBlock()
+	jsonData := json.Marshall(blockData)
+	kh := common.NewKeccakState()
+	block.TxHash = common.HashData(kh, []byte(jsonData))
+}
 
 func (block *Block) VerifyBlockHash() bool{
 	

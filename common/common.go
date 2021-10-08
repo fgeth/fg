@@ -27,7 +27,7 @@ type Hash [HashLength]byte
 
 
 type Signer struct {
-	PubKey			ecdsa.PublicKey
+	PubKey			*ecdsa.PublicKey
 	R				big.Int
 	S				big.Int
 }
@@ -51,6 +51,12 @@ func HashData(kh common.KeccakState, data []byte) (h common.Hash) {
 	return h
 }
 
+type SignedTx struct {
+    Accept			bool				//If node accepts this transaction or rejects the transaction
+	R				big.Int
+	S				big.Int
+	Node			uintptr  			//Able to look up Node and get its public key
+}
 
 
 

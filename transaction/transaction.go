@@ -24,19 +24,21 @@ import (
 
 
 type Transaction struct {
-	TxId				string						//Year::Month::Day::Hour::Min::NodeID::TransactionNumber::Random4Digits
+	TxId				string						//time.Now.UTC.String()::NodeID::TransactionNumber
 	BlockNumber			unit64						//Block Number transaction was confirmed
 	From				address
 	To					address
 	Value				big.Int
 	TxNumber			uint64						//The senders total number of sent transactions to this point including this transaction
 	Processor			address
-	State				string						//Sent | Confirming | Confirmed | Rejected
+	State				int							//-1 Rejected | 1 Sent | 2 Confirming | 3 Completed | 4 Confirmed 
 	Fee					big.Int
 	Date				time.Time				 	 //UTC time transaction took place TxId Date and time will use server timezone	
-	Signature			SignedTx					 //Signature of Sender
+	Signature			Signer						 //Signature of Sender
 	TxHash				uint64
 	Confirmations		[]SignedTx					//Array of Node signatures that have comfirmed this Transaction
+	Challenged			bool						//Used when a Transaction is Challenged
+	
 
 }
 
@@ -70,17 +72,9 @@ func getBalance(addr Common.Address){
 	account := lookUpAccount(addr)
 	return account.Balance
 }
-func sendTransaction(to Common.Address, from Common.Address, amount big.Int, key *ecdsa.PrivateKey, auth string){
-		toBalance :=getBalance(to)
-		fromBalance :=getBalance(from)
-		if fromBalance.Cmp(amount)>0{
-		
-			return "Transaction sent " + string(tx.TxHash)
-		}else{
-			return "Error not enough FGEs have " + fromBalance.String() +" Need "+amount.String()
-			
-		}
-}
+
+
+
 
 func SaveTransactionToDisk(tx Transaction){
 
@@ -121,32 +115,6 @@ func (Tx *Transaction) VerifyTransactionHash() bool{
 	return Tx.TxHash == h
 }
 
-func (node *Node) CompelteTransaction(Tx Transaction){
-	amount := Tx.Value + Tx.Fee
-	node.Accounts[Tx.From].Balance -= amount
-	node.Accounts[Tx.To].Balance += Tx.Value
-}
-func (node *Node ) VerifyTransactionSignatures(Tx Transaction){
-	confirmations :=0
-	rejected :=0
-	for x:=0; x < len(Tx.Confirmations); x +=1{
-		if Verify(Tx.Hash, Tx.Confirmations[x].R,  Tx.Confirmations[x].S, node.Nodes[Tx.Confirmations[x].Node].PubKey){
-			if Tx.Confirmations[x].Accept{
-						confirmations +=1
-			}else{
-					rejected +=1
-			}
-			
-		}
-	}
-	
-	if confirmations/len(node.Ids) > 60/100 {
-		Tx.State = "Confirmed"
-		Node.CompleteTransaction(Tx)
-	}
-	if rejected/len(node.Ids) > 60/100 {
-		Tx.State = "Rejected"
-	}
-	
-	
-}
+
+
+

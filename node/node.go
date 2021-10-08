@@ -25,11 +25,19 @@ type Node struct {
 	Port			string
 	Url				string
 	Year			uint
+	address			string						//Public key as string
+	PrvKey			*ecdsa.PrivateKey
 	PubKey			*ecdsa.PublicKey
-	Ids				[]unitptr				//Array used to get Nodes New Nodes are appended to Array Once added Nodes are never removed
-	Nodes			map[unitptr]Node		//Map index is the Node ID the unitptr hash of the Nodes IP
-	Chain			map[uint]Chain			//Map index is Chainid i.e. the year the chain was created
-	Accounts		map[string]Account		//Map index is account address and the associated account
+	Ids				[]unitptr					//Array used to get Nodes New Nodes are appended to Array Once added Nodes are never removed
+	Nodes			map[unitptr]Node			//Map index is the Node ID the unitptr hash of the Nodes IP
+	Fee				big.Int						//transaction fee for network
+	NewBlock		Block						//New Block
+	Transactions	map[unit64]Transaction  	//Map index is Tranasaction hash with the associated Transaction
+	TransactionNum  uint64						//Number of transactions sent through this node
+	MissingTrans	map[string][]Transaction 	//Map index is Account Address with associated out of sequence Transactions
+	Chain			Chain						//Current Years Chain
+	Chains			map[uint]Chain				//Map index is Chainid i.e. the year the chain was created
+	Accounts		map[string]Account			//Map index is account address and the associated account
 }
 
 
@@ -58,6 +66,88 @@ func (node *Node) VerifyBlockSignature(block *Block) bool{
 	return false
 }
 
+func (node *Node) GetNextBlockNodes() []uintptr{
+		nodes := []uintptr{}
+		numNodes := len(node.NewBlock.Nodes)
+		
+		if numNodes < 8{
+			minBlockNodes :=numNodes
+		}else{
+			minBlockNodes := 8+(len(node.Chain.Blocks[node.NewBlock.BlockNumber-1].Tx)/5000)
+		}
+		for x :=0; x < minBlockNodes; x +=1{
+			nodes = append(nodes, node.Ids[0])
+		}
+		uintA, uintB, uintC, uintD :=crypto.HashToUint64(node.NewBlock.BlockHash)
+		
+		leaderNode 	:= uintA % numNodes
+		backupNode1 := uintB % numNodes
+		backupNode2 := uintc % numNodes
+		backupNode3 := uintd % numNodes
+		
+		for x :=0; x < minBlockNodes; x +=1{
+			select{
+			case x % 4  == 0 :
+				nodes[x] = node.NewBlock.Nodes[leaderNode +x]
+
+			case x % 4 == 1:
+				nodes[x] = node.NewBlock.Nodes[backupNode1 +x]
+
+			case x % 4  == 2:
+				nodes[x] = node.NewBlock.Nodes[backupNode2 +x]
+
+			case x % 4  == 3:
+				nodes[x] = node.NewBlock.Nodes[backupNode3 +x]
+				
+			}
+		}
+		
+		return nodes
+}
+	//When you reviece a new block you send in the previous block to get list of autorized block writers
+func (node *Node) CheckBlockNodes(prvBlock *Block, newBlock *Block) bool{
+		nodes := []uintptr{}
+		numNodes := len(prvBlock.Nodes)
+		
+		if numNodes < 8{
+			minBlockNodes :=numNodes
+		}else{
+			minBlockNodes := 8+(len(node.Chain.Blocks[prvBlock.BlockNumber-1].Tx)/5000)
+		}
+		for x :=0; x < minBlockNodes; x +=1{
+			nodes = append(nodes, node.Ids[0])
+		}
+		uintA, uintB, uintC, uintD :=crypto.HashToUint64(prvBlock.BlockHash)
+		
+		leaderNode 	:= uintA % numNodes
+		backupNode1 := uintB % numNodes
+		backupNode2 := uintc % numNodes
+		backupNode3 := uintd % numNodes
+		
+		
+		for x :=0; x < minBlockNodes; x +=1{
+		
+			select {
+			
+			case x % 4 == 0: 
+				nodes[x] = prvBlock.Nodes[leaderNode +x]
+	
+			case x % 4  == 1:
+				nodes[x] = prvBlock.Nodes[backupNode1 +x]
+	
+			case x % 4 == 2:
+				nodes[x] = prvBlock.Nodes[backupNode2 +x]
+	
+			case x % 4 == 3:
+				nodes[x] = prvBlock.Nodes[backupNode3 +x]
+				
+			}
+		}
+		
+		return nodes == newBlock.Writers
+}
+
+
 func (node *Node) AddNewBlock(block Block)
 	for i: writer range node.Chain[node.Year].Writers{
 		if block.Signer.NodeId == writer{
@@ -78,6 +168,74 @@ func (node *Node) AddNewBlock(block Block)
 	}
 	return "Not Authorized To Write To The Chain"
 }
+func (node *node) HashTransaction(tx string)common.Hash{
+
+	
+		
+}
+    
+func (node *Node) submitTransaction (tx Transaction, writer uintptr) bool{
+	jsonTx := json.Marshal(tx)
+	ip := node.Nodes[writer].ip
+	port := node.Nodes[writer].port
+	type := "tx"
+	//type = block, node, tx, or account
+	url := fmt.Sprintf("http://%i:%p/%t", ip, port, type)
+	
+    resp, err := n.http.Post(url, "application/json", bytes.NewBuffer(jsonTx))
+
+    if err != nil {
+      // handle error and try next node
+      return FALSE
+    }
+	reutrn TRUE
+	
+
+}
+func (node *Node) SendTransaction(to string, from string, amount big.Int, txNumber uint64, sign Signer) string{
+		if (crypto.DecodePubKey(from) == sign.PubKey){
+			if (node.Accounts[from].TxNumber+1 ==txNumber){
+				date := time.Now().UTC()
+				txID :=date.String()+node.Id+node.TransactionNum 
+				blockNumber := node.Chain.Blocks[len(node.Chain.Blocks)-1]+1
+				
+				tx := Transaction{txID, blockNumber, from, to, amount, txNumber, node.address, 1, node.Fee, date}
+				jsonTx := json.Marshal(tx)
+				hash := HashTransaction(jsonTx)
+				tx.TxHash = hash
+				if (Verify(hash , sign.R , sign.S , sign.PubKey )){
+					tx.Signature = sign
+					node.TransactionNum +=1
+					uintA, uintB, uintC, uintD := HashToUint64(hash)
+					writers := node.Chain.Blocks[len(node.chain.Blocks)-1].Writers
+					numWriters := len(writers)
+					writerNum := uintA % numWriters
+					writer :=writers[writerNum]
+					txHash := "Failed To Submit Transaction to BlockNode Try Again"
+					if node.submitTransaction(tx, writer){
+						return string(hash)
+					}else{
+						for x :=1; x < numWriters; x +=1"
+							if writeNum+1 > numWriters{
+								writeNum =-1
+							}
+							if node.submitTransaction(tx, writers[writeNum+1]){
+								txHash = string(hash)
+								break
+							}
+						}
+						return txHash
+					
+					}else{
+						return "Signature not Valid for Tranasaction Hash"
+					}
+				
+			}else{
+				return "Transaction number is incorrect "
+			}
+		}
+}
+
 
 func (node *Node) VerifyTransactions(block Block){
 	for x:=0; x < len(block.Txs); x++1{
@@ -87,7 +245,136 @@ func (node *Node) VerifyTransactions(block Block){
 	}
 
 }
+func (node *Node) CompelteTransaction(Tx Transaction){
+	account := node.Accounts[Tx.From]
+	if Tx.TxNumber == account.TxNumber+1{	
+		amount := Tx.Value + Tx.Fee
+		if account.Balance > amount{
+			account.Data.Balance[account.BlockNumber] := account.Balance
+			account.Balance -= amount
+			account.TxNumber +=1
+			account.BlockNumber = Tx.BlockNumber
+			account.Data.TxFrom[len(account.Data.TxFrom)] = Tx.TxHash
+			node.Accounts[Tx.To].Data.Balance[node.Accounts[Tx.To].BlockNumber] := node.Accounts[Tx.To].Balance
+			node.Accounts[Tx.To].Balance += Tx.Value
+			node.Accounts[Tx.To].Data.TxTo[len(node.Accounts[Tx.To].Data.TxTo)] : Tx
+			Tx.Status = 3
+			node.Transaction[Tx.TxHash] := Tx
+			mTrans := len(node.MissingTrans[Tx.From])
+			missingTx : node.MissingTrans[Tx.From]
+			if mTrans >0{
+				for m :=0; m < 	mTrans; m +=1{
+					if missingTx[m].TxNumber == account.TxNumber+1{
+						node.VerifyTransactionSignatures(node.MissingTrans[Tx.From][m])
+					}
+				}
+			}			
+		}
+	}else{
+		node.MissingTrans[Tx.From] =append(node.MissingTrans[Tx.From], Tx)
+	}
+}
 
+
+func(node *Node) ChallengeTransaction(Tx Transaction, accept bool){
+	Tx.Challenged = "True"
+	sigNum := len(Tx.Confirmations)
+	r,s, err := common.Sign(Tx.TxHash, node.PrvKey)
+	
+	if accpet {
+		signedTx := common.SignedTx{TRUE, r, s, node.Id}
+		Tx.Confirmations[sigNum] := signedTx
+		
+	}else{
+		signedTx := common.SignedTx{FALSE, r, s, node.Id}
+		Tx.Confirmations[sigNum] := signedTx
+	}
+
+}
+func (node *Node) VerifyTransaction(Tx Transaction) bool{
+	amount := Tx.Value + Tx.Fee
+	return node.Accounts[Tx.From].Balance > amount
+	
+}
+func (node *Node ) VerifyTransactionSignatures(Tx Transaction){
+	confirmations :=0
+	rejected :=0
+	numWriters := len(node.Chain.Blocks[Tx.BlockNumber]Writers)
+	writers : = node.Chain.Blocks[Tx.BlockNumber]Writers
+	for x:=0; x < len(Tx.Confirmations); x +=1{
+		pubKey :=node.Nodes[Tx.Confirmations[x].Node].PubKey
+		if pubKey != Nil{
+			if Verify(Tx.Hash, Tx.Confirmations[x].R,  Tx.Confirmations[x].S, pubKey ){
+				if Tx.Confirmations[x].Accept{
+					if Tx.Challenged{
+						confirmations +=1
+					}else{
+						for y:=0; y < numWriters; y +=1 {
+							if node.Nodes[Tx.Confirmations[x].Node] == writers[y]{
+								confirmations +=1
+							}
+						}
+					}
+				}else{
+					if Tx.Challenged{
+						rejected +=1
+					}else{
+						for y:=0; y < numWriters; y +=1 {
+							if node.Nodes[Tx.Confirmations[x].Node] == writers[y]{
+								rejected +=1
+							}
+						}
+					}
+					
+				}
+			
+			}
+		}
+	}
+	//Transaction States -1 Rejected | 1 Sent | 2 Confirming | 3 Completed | 4 Confirmed 
+	if Tx.Challenged{
+		numNodes := len(node.Ids)
+		bar := (numNodes * 80) / 100
+		if confirmations > bar {
+			if node.VerifyTransaction(Tx){
+				if Tx.State > 2 {
+					Tx.State = 4
+				}else{
+					node.CompleteTransaction(Tx)
+				}
+			}else{
+				node.CorrectChainState(Tx, True)
+			}
+		}
+		if rejected > bar {
+			if node.VerifyTransaction(Tx){
+				node.CorrectChainState(Tx, FALSE)
+			}else{
+				Tx.State = -1
+			}
+		}
+		
+	
+	}else{
+		if confirmations > numWriters/2 {
+			if node.VerifyTransaction(Tx){
+				
+				Node.CompleteTransaction(Tx)
+			}else{
+				node.ChallengeTransaction(Tx, FALSE)
+			}
+		}
+		if rejected > numWriters/2 {
+			if node.VerifyTransaction(Tx){
+				node.ChallengeTransaction(Tx, TRUE)
+			}else{
+				Tx.State = -1
+			}
+		}
+	}
+	
+	
+}
 func (node *Node) StartNewChain(year uint){
 	node.Chain[year]
 

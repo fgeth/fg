@@ -36,7 +36,7 @@ type BlockData struct {
 type ValidationReward struct{
 	BlockNumber		uint64
 	Amount			big.Int
-	PubKey			*ecdsa.PublicKey			
+	node			uintptr			
 }
 
 func NewAccount(password string, blockNumber uint64) Account{

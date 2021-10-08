@@ -94,13 +94,28 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 
 
 
-func HashToUint64(h common.Hash) uint64{
-	data := []byte{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
-	for i:=0; i< len(h); i++{
-		data[i] =h[i]	
+func HashToUint64(h common.Hash) uint64, uint64, uint64, uint64{
+	data0 := []byte{0,0,0,0,0,0,0,0}
+	data1 := []byte{0,0,0,0,0,0,0,0}
+	data2 := []byte{0,0,0,0,0,0,0,0}
+	data3 := []byte{0,0,0,0,0,0,0,0}
+	for a:=0; a< 8; a++{
+		data0[a] =h[a]	
 	}
-	theHashAsUint64 := binary.BigEndian.Uint64(data)
-	return theHashAsUint64	
+	for b:=8; b< 16; b++{
+		data1[b] =h[b]	
+	}
+	for c:=16; c< 24; c++{
+		data1[c] =h[c]	
+	}
+	for d:=24; d< 32; d++{
+		data1[d] =h[d]	
+	}
+	uintA := binary.BigEndian.Uint64(data0)
+	uintB := binary.BigEndian.Uint64(data1)
+	uintC := binary.BigEndian.Uint64(data2)
+	uintD := binary.BigEndian.Uint64(data3)
+	return uintA, uintB, uintC, uintD	
 
 }
 
@@ -115,6 +130,24 @@ func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, s
     return string(pemEncoded), string(pemEncodedPub)
 }
 
+func EncodePubKey( publicKey *ecdsa.PublicKey) (string) {
+    
+    x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+    pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+
+    return string(pemEncodedPub)
+}
+
+func DecodePubKey( pemEncodedPub string) (*ecdsa.PublicKey) {
+   
+
+    blockPub, _ := pem.Decode([]byte(pemEncodedPub))
+    x509EncodedPub := blockPub.Bytes
+    genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
+    publicKey := genericPublicKey.(*ecdsa.PublicKey)
+
+    return publicKey
+}
 func Decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
     block, _ := pem.Decode([]byte(pemEncoded))
     x509Encoded := block.Bytes
