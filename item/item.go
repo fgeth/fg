@@ -1,8 +1,12 @@
 package item
 
 import(
-	"math/big"
 	"crypto/rsa"
+	"fmt"
+	"math/big"
+	"encoding/json"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 
 )
@@ -38,7 +42,7 @@ type Size struct {
 
 }
 
-func CreateItem(id string, productId string, title string, description string, amount *big.Int, qty uint32, color string, weight weight, height size,length size, width size, seller rsa.PublicKey) Item{
+func CreateItem(id string, productId string, title string, description string, amount *big.Int, qty uint32, color string, weight Weight, height Size,length Size, width Size, seller rsa.PublicKey) Item{
 	
 	
 	return Item{id,productId,title,description,amount,qty,color,weight,height,length,width,seller,seller}

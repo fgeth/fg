@@ -12,13 +12,15 @@ import (
 	"crypto/x509"
     "encoding/pem"
 	"encoding/binary"
+	"fmt"
 	"hash"
 	"io/ioutil"
 	"math/big"
 R	"math/rand"
 	"path/filepath"
 	"os"
-	"github.com/google/uuid"
+	"strings"
+	"time"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/crypto/scrypt"
 )
@@ -50,14 +52,7 @@ var (
 )
 
 
-type Key struct {
-	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
-	// to simplify lookups we also store the address
-	Address common.Address
-	// we only store privkey as pubkey/address can be derived from it
-	// privkey in this struct is always in plaintext
-	PrivateKey *ecdsa.PrivateKey
-}
+
 
 
 
@@ -453,61 +448,6 @@ func DecodeRSAPubKey( pemEncodedPub string) (rsa.PublicKey) {
     return *publicKey
 }
 
-func Encrypt(password, data []byte) ([]byte, error) {
-    key, salt, err := DeriveKey(password, nil)
-    if err != nil {
-        return nil, err
-    }
-    blockCipher, err := aes.NewCipher(key)
-    if err != nil {
-        return nil, err
-    }
-    gcm, err := cipher.NewGCM(blockCipher)
-    if err != nil {
-        return nil, err
-    }
-    nonce := make([]byte, gcm.NonceSize())
-    if _, err = rand.Read(nonce); err != nil {
-        return nil, err
-    }
-    ciphertext := gcm.Seal(nonce, nonce, data, nil)
-    ciphertext = append(ciphertext, salt...)
-    return ciphertext, nil
-}
-func Decrypt(password, data []byte) (string, error) {
-    salt, data := data[len(data)-32:], data[:len(data)-32]
-    key, _, err := DeriveKey(password, salt)
-    if err != nil {
-        return "", err
-    }
-    blockCipher, err := aes.NewCipher(key)
-    if err != nil {
-        return "", err
-    }
-    gcm, err := cipher.NewGCM(blockCipher)
-    if err != nil {
-        return "", err
-    }
-    nonce, ciphertext := data[:gcm.NonceSize()], data[gcm.NonceSize():]
-    plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-    if err != nil {
-        return "", err
-    }
-    return string(plaintext), nil
-}
-func DeriveKey(password, salt []byte) ([]byte, []byte, error) {
-    if salt == nil {
-        salt = make([]byte, 32)
-        if _, err := rand.Read(salt); err != nil {
-            return nil, nil, err
-        }
-    }
-    key, err := scrypt.Key(password, salt, 1048576, 8, 1, 32)
-    if err != nil {
-        return nil, nil, err
-    }
-    return key, salt, nil
-}
 
 func StoreRSAKey ( key rsa.PrivateKey, auth string, fileName string) error{
 prvKey, PubKey := EncodeRSA(&key, &key.PublicKey)

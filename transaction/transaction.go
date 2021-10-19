@@ -1,23 +1,14 @@
 package transaction
 
 import (
-    "crypto/ecdsa"
-	"crypto/sha1"
-	"crypto/x509"
-    "encoding/pem"
-	"fmt"
+    "fmt"
 	"io/ioutil"
-	"flag"
-	"log"
-	"bufio"
-	"hash"
 	"math/big"
-	"sync"
 	"time"
 	"encoding/json"
-	"net/http"
-	"net/url"
 	 "os"
+	 "path/filepath"
+	 "strconv"
 	 "github.com/fgeth/fg/crypto"
 )
 var (
@@ -162,8 +153,11 @@ func (tx Transaction) CalcInterest() big.Int{
 		months := int64(time.Now().Sub(tx.Credit[x].Time)/(720*time.Hours))
 		if months >0{
 			m := big.NewInt(months)
-			interest.Add(interest.Mul(new(big.Int).Div(tx.Credit[x].Amount, percentage), big.NewInt(2))
-			txInterest.Add(txInterest, interest.Mul(interest, m))
+			q:= new(big.Int).Div(tx.Credit[x].Amount, percentage)
+			interest.Mul(q, big.NewInt(2))
+			interest.Add(interest, q)
+			interest.Mul(interest, m)
+			txInterest.Add(txInterest, interest )
 		}
 	}
 	return txInterest
@@ -188,14 +182,14 @@ for x:=0; x< len(tx.Debit); x+=1{
 
 
 func(Tx BaseTransaction) HashBaseTx(pubKey string ) crypto.Hash{
-	kh crypto.NewKeccakState()
+	kh :=NewKeccakState()
 	txData := string(Tx.ChainYear) + Tx.Time.String() + Tx.Amount.String() + pubKey
-	return crypto.HashData(kh, []byte(TxData)){
+	return HashData(kh, []byte(TxData))
 
 }
 
 func(Tx Transaction) HashTx( ) crypto.Hash{
-	kh crypto.NewKeccakState()
+	kh :=NewKeccakState()
 	for x:=0; x< len(Tx.Credit); x+=1{
 		txData := string(Tx.Credit[x].TxHash) 
 		
@@ -206,16 +200,16 @@ func(Tx Transaction) HashTx( ) crypto.Hash{
 	}
 	txData = txData + string(Tx.Change.TxHash)
 	txData = txData + Tx.OTP
-	return crypto.HashData(kh, []byte(txData)){
+	return crypto.HashData(kh, []byte(txData))
 
 }
 
 func(Tx Transaction) VerifySig() bool{
-	kh crypto.NewKeccakState()
+	kh :=NewKeccakState()
 		
 	publicKey := DecodePubKey(Tx.OTP)
 	if Tx.TxHash == Tx.HashTx(){
-		return crypto.verify(Tx.TxHash, Tx.R, Tx.S, publicKey) 
+		return Verify(Tx.TxHash, Tx.R, Tx.S, publicKey) 
 
 	}else{
 		return FALSE
