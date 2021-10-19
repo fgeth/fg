@@ -18,103 +18,207 @@ import (
 	"net/http"
 	"net/url"
 	 "os"
-	 "github.com/fgeth/fg/common"
-
+	 "github.com/fgeth/fg/crypto"
+)
+var (
+	
 )
 
+type BaseTransaction struct {
+	ChainYear			uint32						//Chain Transaction belongs to	
+	BlockNumber			uint64						//Block Number Transaction was created in
+	Time				time.Time					//Time Transaction was Created time.now()
+	Amount				*big.Int					//Amount in FGs
+	TxHash				crypto.Hash					//Hash of  ChainYear, Time, and amount plus OTP if Debit Transaction
+	Spent				crypto.Hash					//Hash of Transaction were the Debit Balance of this Transaction was spent
+	TxId				crypto.Hash					//Hash the Transaction that this Base Transaction is a part of as a Debit Transaction
+	
+	
+}
 
 type Transaction struct {
-	TxId				string						//time.Now.UTC.String()::NodeID::TransactionNumber
-	BlockNumber			unit64						//Block Number transaction was confirmed
-	From				address
-	To					address
-	Value				big.Int
-	TxNumber			uint64						//The senders total number of sent transactions to this point including this transaction
-	Processor			address
-	State				int							//-1 Rejected | 1 Sent | 2 Confirming | 3 Completed | 4 Confirmed 
-	Fee					big.Int
-	Date				time.Time				 	 //UTC time transaction took place TxId Date and time will use server timezone	
-	Signature			Signer						 //Signature of Sender
-	TxHash				uint64
-	Confirmations		[]SignedTx					//Array of Node signatures that have comfirmed this Transaction
-	Challenged			bool						//Used when a Transaction is Challenged
+	TxHash				crypto.Hash					//Hash of Credit, Debit, and Change hashes plus OTP of sender
+    Debit				[]BaseTransaction
+	Change				  BaseTransaction				//Debit Transaction to give any change due to sender
+	Credit				[]BaseTransaction
+	OTP					string						//One Time Password which is the Public Key as a string Used for this Transaction if present transaction value has been spent
+	R					big.Int						//Part one of Signature of sender when they sign the transaction Hash
+	S					big.Int						//Part two of Signature
+	Payout				bool
+}
+func (tx *BaseTransaction) SaveTx(){
+    dirname, err := os.UserHomeDir()
+    if err != nil {
+        fmt.Println( err )
+    }
+ 
+	path :=filepath.Join(dirname, "fg", "btx")
+	 
+	folderInfo, err := os.Stat(path)
+	if folderInfo.Name() !="" {
+			fmt.Println("")
+	}
+    if os.IsNotExist(err) {
+		err := os.Mkdir(filepath.Join(dirname, "fg"), 0755)
+		fmt.Println(err)
+		err2 := os.Mkdir(path, 0755)
+		fmt.Println(err2)
+    }
+	uintA, uintB, uintC, uintD := crypto.HashToUint64(tx.TxHash)
+	h1 := strconv.FormatUint(uintA, 10)
+	h2 := strconv.FormatUint(uintB, 10)
+	h3 := strconv.FormatUint(uintC, 10)
+	h4 := strconv.FormatUint(uintD, 10)
+	theHash := h1 + h2 +h3 +h4
+	fileName := filepath.Join(path,theHash)
+	fmt.Println(fileName)
+	file, _ := json.MarshalIndent(tx, "", " ")
+ 
+	_ = ioutil.WriteFile(fileName, file, 0644)
+
+}
+func ImportBaseTx(txHash crypto.Hash) BaseTransaction{
+	dirname, err := os.UserHomeDir()
+    if err != nil {
+        fmt.Println( err )
+    }
+	uintA, uintB, uintC, uintD := crypto.HashToUint64(txHash)
+	h1 := strconv.FormatUint(uintA, 10)
+	h2 := strconv.FormatUint(uintB, 10)
+	h3 := strconv.FormatUint(uintC, 10)
+	h4 := strconv.FormatUint(uintD, 10)
+	theHash := h1 + h2 +h3 +h4
+	path :=filepath.Join(dirname, "fg", "btx", theHash )
+	file, _ := ioutil.ReadFile(path)
+	var tx BaseTransaction
+	_ = json.Unmarshal([]byte(file), &tx)
 	
+	return tx
+}
+
+func (tx *Transaction) SaveTx(){
+    dirname, err := os.UserHomeDir()
+    if err != nil {
+        fmt.Println( err )
+    }
+ 
+	path :=filepath.Join(dirname, "fg", "tx")
+	 
+	folderInfo, err := os.Stat(path)
+	if folderInfo.Name() !="" {
+			fmt.Println("")
+	}
+    if os.IsNotExist(err) {
+		err := os.Mkdir(filepath.Join(dirname, "fg"), 0755)
+		fmt.Println(err)
+		err2 := os.Mkdir(path, 0755)
+		fmt.Println(err2)
+    }
+	uintA, uintB, uintC, uintD := crypto.HashToUint64(tx.TxHash)
+	h1 := strconv.FormatUint(uintA, 10)
+	h2 := strconv.FormatUint(uintB, 10)
+	h3 := strconv.FormatUint(uintC, 10)
+	h4 := strconv.FormatUint(uintD, 10)
+	theHash := h1 + h2 +h3 +h4
+	fileName := filepath.Join(path,theHash)
+	fmt.Println(fileName)
+	file, _ := json.MarshalIndent(tx, "", " ")
+ 
+	_ = ioutil.WriteFile(fileName, file, 0644)
+
+}
+func ImportTx(txHash crypto.Hash) Transaction{
+	dirname, err := os.UserHomeDir()
+    if err != nil {
+        fmt.Println( err )
+    }
+	uintA, uintB, uintC, uintD := crypto.HashToUint64(txHash)
+	h1 := strconv.FormatUint(uintA, 10)
+	h2 := strconv.FormatUint(uintB, 10)
+	h3 := strconv.FormatUint(uintC, 10)
+	h4 := strconv.FormatUint(uintD, 10)
+	theHash := h1 + h2 +h3 +h4
+	path :=filepath.Join(dirname, "fg", "tx", theHash )
+	file, _ := ioutil.ReadFile(path)
+	var tx Transaction
+	_ = json.Unmarshal([]byte(file), &tx)
+	
+	return tx
+}
+
+
+func (tx Transaction) CalcFee()big.Int{
+percentage := big.NewInt(100)
+txFee :=big.NewInt(0)
+for x:=0; x< len(tx.Debit); x+=1{
+	txFee.Add(txFee, new(big.Int).Div(tx.Debit[x].Amount, percentage))
+}
+return txFee
+}
+func (tx Transaction) CalcInterest() big.Int{
+    interest  :=big.NewInt(0)
+	txInterest:=big.NewInt(0)
+	for x:=0; x< len(tx.Credit); x+=1{
+		months := int64(time.Now().Sub(tx.Credit[x].Time)/(720*time.Hours))
+		if months >0{
+			m := big.NewInt(months)
+			interest.Add(interest.Mul(new(big.Int).Div(tx.Credit[x].Amount, percentage), big.NewInt(2))
+			txInterest.Add(txInterest, interest.Mul(interest, m))
+		}
+	}
+	return txInterest
+ }
+
+func (Tx Transaction) Credits() big.Int{
+txAmount :=big.NewInt(0)
+for x:=0; x< len(tx.Credit); x+=1{
+	txAmount.Add(txAmount, Tx.Credit[x].Amount)
+}
+	return txAmount
+}
+
+func (Tx Transaction) Debits() big.Int{
+txAmount :=big.NewInt(0)
+for x:=0; x< len(tx.Debit); x+=1{
+	txAmount.Add(txAmount, Tx.Debit[x].Amount)
+}
+	return txAmount
+}
+
+
+
+func(Tx BaseTransaction) HashBaseTx(pubKey string ) crypto.Hash{
+	kh crypto.NewKeccakState()
+	txData := string(Tx.ChainYear) + Tx.Time.String() + Tx.Amount.String() + pubKey
+	return crypto.HashData(kh, []byte(TxData)){
 
 }
 
-type Transactions struct{ 
-	ChainID		  uint
-	Transactions  map[uint64]Transaction  // Map of all Transactions for the Year by TxHash
+func(Tx Transaction) HashTx( ) crypto.Hash{
+	kh crypto.NewKeccakState()
+	for x:=0; x< len(Tx.Credit); x+=1{
+		txData := string(Tx.Credit[x].TxHash) 
+		
+	}
+	for x:=0; x< len(Tx.Debit); x+=1{
+		txData = txData + string(Tx.Debit[x].TxHash) 
+		
+	}
+	txData = txData + string(Tx.Change.TxHash)
+	txData = txData + Tx.OTP
+	return crypto.HashData(kh, []byte(txData)){
 
 }
 
-type TransactionPool struct{
-   Txs			[]Transaction
-   NextNumber	uint64
-}
+func(Tx Transaction) VerifySig() bool{
+	kh crypto.NewKeccakState()
+		
+	publicKey := DecodePubKey(Tx.OTP)
+	if Tx.TxHash == Tx.HashTx(){
+		return crypto.verify(Tx.TxHash, Tx.R, Tx.S, publicKey) 
 
-type SignedTx struct {
-    Accept			bool				//If node accepts this transaction or rejects the transaction
-	R				big.Int
-	S				big.Int
-	Node			uintptr  			//Able to look up Node and get its public key
-}
-
-func createTxPool() TransactionPool{
-	txs := []Transaction
-	txPool := TransactionPool{txs, 1}
-}
-func (txPool *TransactionPool ) addTxs(transaction Transaction){
-		txPool.Txs.append(transaction)
-		txPool.NextNumber +=1 
-}
-func getBalance(addr Common.Address){
-	account := lookUpAccount(addr)
-	return account.Balance
-}
-
-
-
-
-func SaveTransactionToDisk(tx Transaction){
-
-
-}
-
-func LoadTransactionFromDisk(hash uint64){
-
-
-}
-func Address2Key(address string) ( *ecdsa.PublicKey) {
-    blockPub, _ := pem.Decode([]byte(address))
-    x509EncodedPub := blockPub.Bytes
-    genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
-    publicKey := genericPublicKey.(*ecdsa.PublicKey)
-
-    return publicKey
-}
-func (Tx *Transaction) VerifySender(){
+	}else{
+		return FALSE
+	}
 	
 }
-func (Tx *Transaction) GetUnsignedTransaction()  *Transaction{
-
-	checkTrans :=Transaction{}
-	checkTrans.From := Tx.From
-	checkTrans.To := Tx.To
-	checkTrans.Value := Tx.Value
-	checkTrans.TxNumber := Tx.TxNumber
-	return checkTrans
-}
-
-func (Tx *Transaction) VerifyTransactionHash() bool{
-	
-	kh := NewKeccakState()
-	
-	data, _ := json.Marshal(Tx.GetUnsignedTransaction())
-	h := HashData(kh , []byte(data))
-	return Tx.TxHash == h
-}
-
-
-
-
