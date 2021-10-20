@@ -5,7 +5,6 @@ package node
 import (
 	"crypto/rsa"
 	"crypto/ecdsa"
-	"fmt"
 	"sync"
 	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/transaction"
@@ -39,37 +38,13 @@ type Comm struct{
 }
 
 type Selling struct {
-	Item			[]Item							//Array of Items
-	Tx				Transaction						//Tranaction shell just has the Debit BaseTransactions
+	Item			[]item.Item							//Array of Items
+	Tx				transaction.Transaction				//Tranaction shell just has the Debit BaseTransactions
 	
 }
 
 
-func (node *Node) genRsa() {
- prvKey := GenerateRSAKey()
- pubKey := prvKey.PublicKey
- secret := RSAEncrypt("Secret", pubKey)
- fmt.Println("Encrypted Message =", secret)
- clearText := RSADecrypt(secret, prvKey)
- fmt.Println("Message =", clearText)
- publicKey := EncodeRSAPubKey(&pubKey)
- fmt.Println("Publick Key =", publicKey)
- pKey := DecodeRSAPubKey(publicKey)
- secret2 := RSAEncrypt("Secret2", pKey)
- fmt.Println("Encrypted Message =", secret2)
- clearText2 := RSADecrypt(secret2, prvKey)
- fmt.Println("Message =", clearText2)
- pk := prvKey
- err:= StoreRSAKey( pk ,"Pass", "Key1")
- fmt.Println(err)
- pvKey, pbKey, err :=GetRSAKey("Key1", "Pass") //rsa.PrivateKey,rsa.PublicKey, error
- secret3 := RSAEncrypt("Secret3", pbKey)
- fmt.Println("Encrypted Message =", secret3)
- clearText3 := RSADecrypt(secret3, pvKey)
- fmt.Println("Message =", clearText3)
 
-
-}
 
 
 

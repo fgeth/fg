@@ -139,7 +139,7 @@ func sendNewTransaction(w http.ResponseWriter, r *http.Request) {
     json.Unmarshal(reqBody, &tx)
 	if tx.VaildTransaction()(){
 		if node.Writer{
-			BTx = append(BTx, tx.TxHash)
+			BTxHash = append(BTxHash, tx.TxHash)
 		
 		}else{	
 			node.SendTransaction(tx)

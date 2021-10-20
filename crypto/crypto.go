@@ -57,7 +57,7 @@ var (
 
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
-type Hash [HashLength]byte
+type Hash []byte
 
 type Signer struct {
 	PubKey			*ecdsa.PublicKey

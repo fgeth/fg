@@ -89,26 +89,3 @@ func ImportItem(id string) Item{
 	
 	return item
 }
-
-func AllItemsInDir() {
-	dirname, err := os.UserHomeDir()
-    if err != nil {
-        fmt.Println( err )
-    }
-
-	dir :=filepath.Join(dirname, "fg", "items")
-   filepath.Walk(dir, func(path string, info os.FileInfo, e error) {
-              if e != nil {
-                      fmt.Println(e)
-              }
-
-              // check if it is a regular file (not dir)
-              if info.Mode().IsRegular() {
-                      fmt.Println("file name:", info.Name())
-                      fmt.Println("file path:", path)
-					  Items = Items{map[uint64]Item{info.Name(), item.ImportItem(info.Name)}}
-              }
-             
-      })
-	  
-}

@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"bytes"
     "fmt"
 	"io/ioutil"
 	"math/big"
@@ -33,8 +34,8 @@ type Transaction struct {
 	Change				  BaseTransaction				//Debit Transaction to give any change due to sender
 	Credit				[]BaseTransaction
 	OTP					string						//One Time Password which is the Public Key as a string Used for this Transaction if present transaction value has been spent
-	R					big.Int						//Part one of Signature of sender when they sign the transaction Hash
-	S					big.Int						//Part two of Signature
+	R					*big.Int						//Part one of Signature of sender when they sign the transaction Hash
+	S					*big.Int						//Part two of Signature
 	Payout				bool
 }
 func (tx *BaseTransaction) SaveTx(){
@@ -138,7 +139,7 @@ func ImportTx(txHash crypto.Hash) Transaction{
 }
 
 
-func (tx Transaction) CalcFee()big.Int{
+func (tx Transaction) CalcFee() *big.Int{
 percentage := big.NewInt(100)
 txFee :=big.NewInt(0)
 for x:=0; x< len(tx.Debit); x+=1{
@@ -146,11 +147,12 @@ for x:=0; x< len(tx.Debit); x+=1{
 }
 return txFee
 }
-func (tx Transaction) CalcInterest() big.Int{
+func (tx Transaction) CalcInterest() *big.Int{
     interest  :=big.NewInt(0)
 	txInterest:=big.NewInt(0)
+	percentage := big.NewInt(100)
 	for x:=0; x< len(tx.Credit); x+=1{
-		months := int64(time.Now().Sub(tx.Credit[x].Time)/(720*time.Hours))
+		months := int64(time.Now().Sub(tx.Credit[x].Time)/(720*time.Hour))
 		if months >0{
 			m := big.NewInt(months)
 			q:= new(big.Int).Div(tx.Credit[x].Amount, percentage)
@@ -163,17 +165,17 @@ func (tx Transaction) CalcInterest() big.Int{
 	return txInterest
  }
 
-func (Tx Transaction) Credits() big.Int{
+func (Tx Transaction) Credits() *big.Int{
 txAmount :=big.NewInt(0)
-for x:=0; x< len(tx.Credit); x+=1{
+for x:=0; x< len(Tx.Credit); x+=1{
 	txAmount.Add(txAmount, Tx.Credit[x].Amount)
 }
 	return txAmount
 }
 
-func (Tx Transaction) Debits() big.Int{
+func (Tx Transaction) Debits() *big.Int{
 txAmount :=big.NewInt(0)
-for x:=0; x< len(tx.Debit); x+=1{
+for x:=0; x< len(Tx.Debit); x+=1{
 	txAmount.Add(txAmount, Tx.Debit[x].Amount)
 }
 	return txAmount
@@ -182,16 +184,17 @@ for x:=0; x< len(tx.Debit); x+=1{
 
 
 func(Tx BaseTransaction) HashBaseTx(pubKey string ) crypto.Hash{
-	kh :=NewKeccakState()
+	kh :=crypto.NewKeccakState()
 	txData := string(Tx.ChainYear) + Tx.Time.String() + Tx.Amount.String() + pubKey
-	return HashData(kh, []byte(TxData))
+	return crypto.HashData(kh, []byte(txData))
 
 }
 
 func(Tx Transaction) HashTx( ) crypto.Hash{
-	kh :=NewKeccakState()
+	kh :=crypto.NewKeccakState()
+	txData := ""
 	for x:=0; x< len(Tx.Credit); x+=1{
-		txData := string(Tx.Credit[x].TxHash) 
+		txData = string(Tx.Credit[x].TxHash) 
 		
 	}
 	for x:=0; x< len(Tx.Debit); x+=1{
@@ -205,14 +208,13 @@ func(Tx Transaction) HashTx( ) crypto.Hash{
 }
 
 func(Tx Transaction) VerifySig() bool{
-	kh :=NewKeccakState()
-		
-	publicKey := DecodePubKey(Tx.OTP)
-	if Tx.TxHash == Tx.HashTx(){
-		return Verify(Tx.TxHash, Tx.R, Tx.S, publicKey) 
+			
+	publicKey := crypto.DecodePubKey(Tx.OTP)
+	if bytes.Compare(Tx.TxHash, Tx.HashTx()) ==0 {
+		return crypto.Verify(Tx.TxHash, Tx.R, Tx.S, publicKey) 
 
 	}else{
-		return FALSE
+		return false
 	}
 	
 }
