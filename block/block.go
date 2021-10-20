@@ -111,6 +111,7 @@ func ImportBlock(chainYear uint64, blockNumber uint64) Block{
 }
 
 
+
 func (block *Block) VerifyWriters( ) bool{
 	Signed :=0
 	NumWriters := len(block.Writers)

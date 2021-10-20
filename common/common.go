@@ -2,8 +2,14 @@ package common
 
 import (
 	 "bytes"
+	 "encoding/json"
+	 "fmt"
+	 "io/ioutil"
 	 "math/big"
+	 "os"
 	 "path/filepath"
+	 "strconv"
+	 "time"
 	 "github.com/fgeth/fg/block"
 	 "github.com/fgeth/fg/chain"
 	 "github.com/fgeth/fg/crypto"
@@ -31,8 +37,9 @@ var (
 	BTxHash				[]crypto.Hash					//Stores processed transaction debit hashes while Block or Leader Node
 	PBTxHash			[]crypto.Hash					//Stores previous Block Transactions to account for Transactions sent to Block Leader until block is created & used to validate transactions are in block
 	NumTx				int64							//Keeps track of number of Transactions resets at 1,000 Transactions and FGValue is bumped .01
-	TTx					[]trasaction.Transaction	    //Used to Transfer Transactions To Nodes One Block at a Time	
-	Items				Items							//Index is Item Id
+	TTx					[]transaction.Transaction	    //Used to Transfer Transactions To Nodes One Block at a Time	
+	Items				map[string]item.Item			//Index is Item Id
+	MyNode				*node.Node
 	
 )
 
@@ -74,7 +81,7 @@ func USD2FG(amount float64) *big.Int{
 	
 }
 
-func CreateBlock(node *node.Node, blockNumber uint64) block.Block{
+func CreateBlock( blockNumber uint64) block.Block{
 	NumTxs := uint64(len(PTx))
 	var blockTx  []crypto.Hash
 	TxFees :=big.NewInt(0)
@@ -92,18 +99,19 @@ func CreateBlock(node *node.Node, blockNumber uint64) block.Block{
 	}else{
 		blockTx = PTx
 	}
-	
+	BlockReward :=big.NewInt(0)
 	bn := int64(len(blockTx))
 	NumTx += bn
 	if bn <1000{
 		n:= big.NewInt(0)
 		n.SetString("10000000000000000", 10)
 		t:= big.NewInt(bn)
-		BlockReward :=new(big.Int).Mul(t, n)
+		BlockReward =new(big.Int).Mul(t, n)
 	}else{
-		BlockReward:= big.NewInt(0)
+		BlockReward= big.NewInt(0)
 		BlockReward.SetString("10000000000000000000", 10)
 	}
+		fmt.Println(BlockReward)
 	
 	if NumTx > 1000 {
 		if FGValue <1000{
@@ -162,14 +170,18 @@ func CreateBlock(node *node.Node, blockNumber uint64) block.Block{
 	 return block
 }
 
+//TODO Recreate Block Failed
+func BlockFailed(blockNumber uint64){
+
+}
 func ElectNodes(block block.Block) []uint64{
-kh :=crypto.NewKeccakState()
+
 	numTx := (PB.NumTxs/500)+1
 	var blockNode []uint64
 	var numNodes uint64
 	numNodes = uint64(len(block.Nodes))
 	if numNodes < 7{
-		numTx := numNodes
+		numTx = numNodes
 	}else{
 		if numTx < 7 {
 			numTx =7
@@ -219,13 +231,13 @@ func VerifyBlock(block *block.Block){
 	numNodes := 0
 	for x:=0; x < len(block.Signed); x +=1{
 		if block.VerifyWriters(){
-				if (len(block.Txs) ==1000) && (bytes.Compare(byte(block.Writers),byte(PB.Writers)) ==0){
+				if (len(block.Txs) ==1000) && (CompareWriters(block.Writers,PB.Writers)){
 					if block.FGValue - PB.FGValue <=.1{
 						numNodes +=1
 					}
 				}else{
 					
-					if block.Writers ==ElectNodes(block){
+					if CompareWriters(block.Writers, GetWrtiers(ElectNodes(*block))){
 						numNodes +=1
 					}
 				}
@@ -240,6 +252,24 @@ func VerifyBlock(block *block.Block){
 	}
 
 }
+func GetWrtiers(nodes []uint64) []string{
+	var writers []string
+	for x:=0; x < len(nodes); x +=1{
+		writers = append(writers, ActiveNodes[nodes[x]])
+	}
+	return writers
+}
+
+func CompareWriters(writers []string, theWriters []string) bool{
+	NotEqual := false
+	for x :=0; x < len(theWriters); x +=1{
+		if writers[x] != theWriters[x]{
+			NotEqual = true
+		}
+			
+	}
+	return NotEqual
+}
 
 func PayOutNodes(TxFees *big.Int, blockNumber uint64)[]transaction.Transaction{
 
@@ -248,33 +278,173 @@ payOut := TxFees.Div(TxFees, nodes)
 
 var Txd []transaction.Transaction
 	for k,x := range ActiveNodes{
-		Tx:=append(Tx, CreatePayoutTransaction(payout, ActiveNodes[x].Id, blockNumber))
+		Txd =append(Tx, CreatePayoutTransaction(payOut, x, blockNumber))
+		fmt.Println("Paying node number:", k)
 	}
 	
-	return Tx
+	return Txd
 
 	
 }
 
 func PayOutWriters(blockReward *big.Int, blockNumber uint64)[]transaction.Transaction{
 
-nodes := big.NewInt(len(Writers))
+nodes := big.NewInt(int64(len(Writers)))
 payOut := blockReward.Div(blockReward, nodes)
 
-var Txd []Transaction
+var Txd []transaction.Transaction
 	for x:=0; x<len(Writers); x +=1{
-		Tx:=append(Tx, node.CreatePayoutTransaction(payout, Writers[x], blockNumber))
+		Txd=append(Tx, CreatePayoutTransaction(payOut, Writers[x], blockNumber))
 	}
 	
-	return Tx
+	return Txd
 
 	
 }
 
+func CreatePayoutTransaction(amt *big.Int, pubKey string, blockNumber uint64) transaction.Transaction{
+
+
+	var Debit transaction.BaseTransaction
+	var Credit transaction.BaseTransaction
+	var Tx transaction.Transaction
+	Debit.ChainYear = ChainYear
+	Debit.BlockNumber = blockNumber
+	Debit.Time = time.Now()
+	Debit.Amount = amt
+	Debit.TxHash = Debit.HashBaseTx(pubKey)
+	Credit.ChainYear = ChainYear
+	Credit.BlockNumber = blockNumber
+	Credit.Time = time.Now()
+	Credit.TxHash = Credit.HashBaseTx(pubKey)
+	Credit.Amount = amt
+	Tx.Change.TxHash = Tx.Change.HashBaseTx(pubKey)
+	Tx.Debit =append(Tx.Debit, Debit)
+	Tx.Credit = append(Tx.Credit, Credit)
+	Tx.OTP = MyNode.Id
+	Tx.TxHash = Tx.HashTx()
+	Tx.R, Tx.S = crypto.Sign(Tx.TxHash, MyNode.PrvKey)
+	Tx.Payout = true
+	return Tx
+	
+}
+func SellItem(item item.Item) {
+	prvKey := crypto.GenerateRSAKey()
+	MyNode.Comms.RsaPrvKeys[prvKey.PublicKey] = prvKey
+	item.Seller = prvKey.PublicKey
+	MyNode.Items.Item = append(MyNode.Items.Item, item)
+
+	
+}
+
+//TODO Fix To Where this imports the blocks
+func ImportBlocks() {
+	dirname, err := os.UserHomeDir()
+    if err != nil {
+        fmt.Println( err )
+    }
+    fmt.Println( dirname )
+	path :=filepath.Join(dirname, "fg", "chain", strconv.FormatUint(ChainYear, 10))
+
+	fileName := filepath.Join(path, strconv.FormatUint(BlockNumber, 10))
+	file, _ := ioutil.ReadFile(fileName)
+	var block block.Block
+ 	_ = json.Unmarshal([]byte(file), &block)
+
+}
+//TODO Sign Genesis block
+func SignGenesisBlocks(){
+
+}
+
+//TODO GetBlocks
+func GetBlocks(){
+
+}
+//TODO Get Txs
+func GetTxs(){
+
+}
+
+func VaildTransaction(Tx transaction.Transaction) bool{
+txFee := Tx.CalcFee()
+ txInterest := big.NewInt(0)
+if FGValue >=100{
+	txInterest = Tx.CalcInterest()
+}
+
+if Tx.OTP !=""{
+		if Tx.VerifySig(){
+			TC := Tx.Credits()
+			TD := Tx.Debits()
+			if TC.Add(TC,txInterest) == txFee.Add(txFee, TD.Add(TD, Tx.Change.Amount)){
+			for x:=0; x< len(Tx.Credit); x+=1{
+				cTx := transaction.ImportBaseTx(Tx.Credit[x].TxHash)
+				if cTx.OTP ==""{
+					cTx.OTP=Tx.Credit[x].OTP
+					cTx.SaveTx()
+					
+				}else{
+					return false		//Double Spend
+				}
+			}
+			for x:=0; x< len(Tx.Debit); x+=1{
+				Tx.Debit[x].SaveTx()
+
+			}
+				Tx.Change.SaveTx()
+			}else{
+					return false
+			}
+		}else{
+			return false
+		}
+}else{
+	if Tx.Payout == true{
+		if Tx.VerifySig(){
+			block := block.ImportBlock(Tx.Credit[0].ChainYear , Tx.Credit[0].BlockNumber)
+			for x:=0; x<len(block.Writers); x +=1{
+				if block.Writers[x] == Tx.OTP{
+					if Tx.Debit[0].Amount == block.NodePayout{
+							return true
+						}
+					if Tx.Debit[0].Amount == block.WriterPayout{
+						return true
+					}
+				}
+			}
+		}
+	
+	}
+	return false
+}
+return false
+}
+
+
+
+//TODO fix where this imports the transactions
+func ImportTxs() {
+	dirname, err := os.UserHomeDir()
+    if err != nil {
+        fmt.Println( err )
+    }
+	var txHash crypto.Hash
+	uintA, uintB, uintC, uintD := crypto.HashToUint64(txHash)
+	h1 := strconv.FormatUint(uintA, 10)
+	h2 := strconv.FormatUint(uintB, 10)
+	h3 := strconv.FormatUint(uintC, 10)
+	h4 := strconv.FormatUint(uintD, 10)
+	theHash := h1 + h2 +h3 +h4
+	path :=filepath.Join(dirname, "fg", "tx", theHash )
+	file, _ := ioutil.ReadFile(path)
+	var tx transaction.Transaction
+	_ = json.Unmarshal([]byte(file), &tx)
+}
 
 func trimPTx(){
 	if len(PTx) > 1000{
-		tmpTx := []Transaction
+		var tmpTx  []crypto.Hash
 		for x :=1000; x < len(PTx); x+=1{
 			tmpTx = append(tmpTx, PTx[x])
 		}
@@ -290,43 +460,39 @@ func AllItemsInDir() {
     }
 
 	dir :=filepath.Join(dirname, "fg", "items")
-   filepath.Walk(dir, func(path string, info os.FileInfo, e error) {
-              if e != nil {
-                      fmt.Println(e)
-              }
-
-              // check if it is a regular file (not dir)
-              if info.Mode().IsRegular() {
-                      fmt.Println("file name:", info.Name())
-                      fmt.Println("file path:", path)
-					  Items[info.Name()] = item.ImportItem(info.Name)
-              }
-             
-      })
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, f := range files {
+		fmt.Println(f.Name())
+		  Items[f.Name()] = item.ImportItem(f.Name())
+	}
+   
 	  
 }
 
 func genRsa() {
- prvKey := GenerateRSAKey()
+ prvKey := crypto.GenerateRSAKey()
  pubKey := prvKey.PublicKey
- secret := RSAEncrypt("Secret", pubKey)
+ secret := crypto.RSAEncrypt("Secret", pubKey)
  fmt.Println("Encrypted Message =", secret)
- clearText := RSADecrypt(secret, prvKey)
+ clearText := crypto.RSADecrypt(secret, prvKey)
  fmt.Println("Message =", clearText)
- publicKey := EncodeRSAPubKey(&pubKey)
+ publicKey := crypto.EncodeRSAPubKey(&pubKey)
  fmt.Println("Publick Key =", publicKey)
- pKey := DecodeRSAPubKey(publicKey)
- secret2 := RSAEncrypt("Secret2", pKey)
+ pKey := crypto.DecodeRSAPubKey(publicKey)
+ secret2 := crypto.RSAEncrypt("Secret2", pKey)
  fmt.Println("Encrypted Message =", secret2)
- clearText2 := RSADecrypt(secret2, prvKey)
+ clearText2 := crypto.RSADecrypt(secret2, prvKey)
  fmt.Println("Message =", clearText2)
  pk := prvKey
- err:= StoreRSAKey( pk ,"Pass", "Key1")
+ err:= crypto.StoreRSAKey( pk ,"Pass", "Key1")
  fmt.Println(err)
- pvKey, pbKey, err :=GetRSAKey("Key1", "Pass") //rsa.PrivateKey,rsa.PublicKey, error
- secret3 := RSAEncrypt("Secret3", pbKey)
+ pvKey, pbKey, err :=crypto.GetRSAKey("Key1", "Pass") //rsa.PrivateKey,rsa.PublicKey, error
+ secret3 := crypto.RSAEncrypt("Secret3", pbKey)
  fmt.Println("Encrypted Message =", secret3)
- clearText3 := RSADecrypt(secret3, pvKey)
+ clearText3 := crypto.RSADecrypt(secret3, pvKey)
  fmt.Println("Message =", clearText3)
 
 

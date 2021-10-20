@@ -1,12 +1,12 @@
 package main
 
 import(
-
+	"bytes"
 	"fmt"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,35 +14,36 @@ import(
 	"syscall"
 	"time"
 	"github.com/gorilla/mux"
-	"github.com/fgeth/fg/block"
+	//"github.com/fgeth/fg/block"
 	"github.com/fgeth/fg/common"
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
 )
 var (
-	node	 *Node
+
 	wg 		 sync.WaitGroup
 
 )
 
 func main(){
 	
-	node = NewNode()
-	SaveNode()
+	common.MyNode = NewNode()
+	common.MyNode.SaveNode()
 	switch os.Args[1]{
 	case "Gen":
-		ImportBlocks()
-		ImportTxs()
-		node.SignGenesisBlocks() 
+		fmt.Println("Genesis Block")
+		//common.ImportBlocks()
+		//common.ImportTxs()
+		common.SignGenesisBlocks() 
 	case "Node":
 		time.Sleep(time.Second * 60)
 		os.Exit(0)
 	default:
 		go register()
-		ImportBlocks()
-		ImportTxs()
-		node.GetBlocks()
-		node.GetTxs()
+		common.ImportBlocks()
+		common.ImportTxs()
+		common.GetBlocks()
+		common.GetTxs()
 	}
 	wg.Add(1)
 	go server()
@@ -56,15 +57,15 @@ func server(){
 	defer wg.Done()
 	r := mux.NewRouter()
     
-	r.HandleFunc("/", home).Methods("GET")
-	r.HandleFunc("/getBlocks", sendBlocks).Methods("GET")
-	r.HandleFunc("/getNodes", sendNodes).Methods("GET")
-	r.HandleFunc("/getTxs", sendTxs).Methods("GET")
+	//r.HandleFunc("/", home).Methods("GET")
+	//r.HandleFunc("/getBlocks", sendBlocks).Methods("GET")
+	//r.HandleFunc("/getNodes", sendNodes).Methods("GET")
+	//r.HandleFunc("/getTxs", sendTxs).Methods("GET")
 	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
-	r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
-	r.HandleFunc("/block", createNewBlock).Methods("POST")
-	r.HandleFunc("/newNode", newNode).Methods("POST")
-	r.HandleFunc("/blockTxs", processTxs).Methods("POST")
+	//r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
+	//r.HandleFunc("/block", createNewBlock).Methods("POST")
+	//r.HandleFunc("/newNode", newNode).Methods("POST")
+	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
 	http.Handle("/", r)
 if err := http.ListenAndServe(":42069", nil); err != nil {
 	    	log.Fatal(err)
@@ -77,10 +78,10 @@ func fg(){
 	wg.Add(1)
 	defer wg.Done()
 	for {
-		CheckBlockNumber := BlockNumber	
+		CheckBlockNumber := common.BlockNumber	
 		time.Sleep(time.Second * 60)
-		if CheckBlockNumber == BlockNumber{
-			node.BlockFailed(BlockNumber)
+		if CheckBlockNumber == common.BlockNumber{
+			common.BlockFailed(common.BlockNumber)
 		}
 	}
 
@@ -96,23 +97,25 @@ func CloseHandler() {
 		os.Exit(0)
 	}()
 }
-
+//TODO Fix this
 func register() bool{
-	haveNode := FALSE
+	haveNode := false
 	ImportActiveNodes()
-	if len(ActiveNodes) >0{
-		haveNode = TRUE	
+	if len(common.ActiveNodes) >0{
+		haveNode = true	
 	}else{
-		node.GetNodes()
-		if len(ActiveNodes) >0{
-			haveNode = TRUE	
+		//common.MyNode.GetNodes()
+		if len(common.ActiveNodes) >0{
+			haveNode = true	
 		}
 	}	
 	if haveNode {
-	for x:=0; x<len(ActiveNodes); x+=1{
-			node.RegisterNode(ActiveNodes[x])
+	for x:=0; x<len(common.ActiveNodes); x+=1{
+			
+			//common.MyNode.RegisterNode(common.ActiveNodes[x])
 		}
 	}
+	return haveNode
 }
 func SaveFiles(){
 //TODO Implement way to save current BlockChain State to File
@@ -123,26 +126,27 @@ func SaveFiles(){
 
 func SaveActiveNodes(){
 
-	file, _ := json.MarshalIndent(ActiveNodes, "", " ")
+	file, _ := json.MarshalIndent(common.ActiveNodes, "", " ")
  
 	_ = ioutil.WriteFile("ActiveNodes.json", file, 0644)
 
 }
 func ImportActiveNodes(){
 	file, _ := ioutil.ReadFile("ActiveNodes.json")
-	_ = json.Unmarshal([]byte(file), &ActiveNodes)
+	_ = json.Unmarshal([]byte(file), &common.ActiveNodes)
 }
 
+//TODO fix this
 func sendNewTransaction(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
-    var tx Transaction
+    var tx transaction.Transaction
     json.Unmarshal(reqBody, &tx)
-	if tx.VaildTransaction()(){
-		if node.Writer{
-			BTxHash = append(BTxHash, tx.TxHash)
+	if common.VaildTransaction(tx){
+		if common.MyNode.Writer{
+			common.BTxHash = append(common.BTxHash, tx.TxHash)
 		
 		}else{	
-			node.SendTransaction(tx)
+			//common.SendTransaction(tx)
 		}
 	
 		json.NewEncoder(w).Encode(tx)
@@ -151,131 +155,50 @@ func sendNewTransaction(w http.ResponseWriter, r *http.Request) {
 
 func NewTransaction(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
-    var tx Transaction
+    var tx transaction.Transaction
     json.Unmarshal(reqBody, &tx)
 }
 
-func (node *Node) buildTransaction(){
+func buildTransaction(){
 	
 }
 
+func NewNode() *node.Node{
+	var node *node.Node
+	return node
+}
+func newBlock(blockNumber uint64){
+	common.CreateBlock( blockNumber )
+}
 
-func verifyTx(OTP string, Tx Transaction) Transaction{
-	
+func verifyTx(OTP string, Tx transaction.Transaction) transaction.Transaction{
+	var inValidTx transaction.Transaction 
 	txCreditAmt :=big.NewInt(0)
 	txDebitAmt :=big.NewInt(0)
 	txCAmt :=big.NewInt(0)
 	txDAmt :=big.NewInt(0)
 	txAcc :=big.NewInt(0)
-	for x:=0; x< len(Tx.Credits); x+=1{
-		txCreditAmt := txCreditAmt.Add(txCreditAmt, Tx.Credits[x].Amount)
+	for x:=0; x< len(Tx.Credit); x+=1{
+		txCreditAmt.Add(txCreditAmt, Tx.Credit[x].Amount)
 	}
-	for x:=0; x< len(Tx.Debits); x+=1{
-		txDebitAmt := txdebitAmt.Add(txdebitAmt, Tx.Debits[x].Amount)
+	for x:=0; x< len(Tx.Debit); x+=1{
+		txDebitAmt.Add(txDebitAmt, Tx.Debit[x].Amount)
 	}
 	txInt := Tx.CalcInterest()
 	txFee := Tx.CalcFee()
 	txCAmt.Add(txInt, txCreditAmt)
 	txDAmt.Add(txFee, txDebitAmt)
-	txChange.Sub(txCAmt, txDAmt)
-	txAcc.add(txDAmt,Tx.Change.Amount)
+	Tx.Change.Amount.Sub(txCAmt, txDAmt)
+	txAcc.Add(txDAmt,Tx.Change.Amount)
 	txAcc.Sub(txAcc,txCAmt)
-	if (txAcc == 0){
+	if (txAcc.Cmp(big.NewInt(0))==0){
 
-		if Tx.TxHash == Tx.HashTx(){
-			if Tx.Payout == FALSE{
+		if bytes.Compare(Tx.TxHash, Tx.HashTx()) ==0 {
+			if Tx.Payout == false{
 				return Tx
 				}
 			}
 	}
-	
+	return inValidTx
 }
 
-
-func (tx Transaction) VaildTransaction() bool{
-txFee := tx.CalcFee()
-
-if FGValue =>100{
-	txInterest := tx.CalcInterest()
-}else{
-	txInterest :=0
-}
-
-if Tx.OTP !=""{
-		if Tx.VerifySig(){
-			if Tx.Credits().Add(Tx.Credits,txInterest) == txFee.Add(txFee, Tx.Debits().Add(Tx.Debits(), Tx.Change)){
-			for x:=0; x< len(tx.Credit); x+=1{
-				cTx := ImportBaseTx(tx.Credit[x].TxHash)
-				if cTx.OTP ==""{
-					cTx.OTP=tx.Credit[x].OTP
-					cTx.SaveTx()
-					
-				}else{
-					return FALSE		//Double Spend
-				}
-			}
-			for x:=0; x< len(tx.Debit); x+=1{
-				tx.Debit[x].SaveTx()
-
-			}
-				tx.Change.SaveTx()
-			}else{
-					return FALSE
-			}
-		}else{
-			return FALSE
-		}
-}else{
-	if Tx.Credit.Payout == TRUE{
-		if tx.VerifySig(){
-			block := ImportBlock(tx.Credit.ChainYear , tx.Credit.BlockNumber)
-			for x:=0; x<len(block.Writers); x +=1{
-				if block.Writers[x] == tx.OTP{
-					if tx.Debit.Amount == block.NodePayout
-						return TRUE
-					if tx.Debit.Amount == block.WriterPayout
-				}
-			}
-		}
-	
-	}
-	return FALSE
-}
-}
-
-
-func (node *Node) CreatePayoutTransaction(amt big.Int, pubKey string, blockNumber uint64) Transaction{
-
-	var C []BaseTransaction
-	var D []BaseTransaction
-	var Debit BaseTransaction
-	var Credit BaseTransaction
-	var TX Transaction
-	Debit.ChainYear = ChainYear
-	Debit.BlockNumber = blockNumber
-	Debit.Time = time.Now()
-	Debit.Amount = amt
-	Debit.TxHash = Debit.HashBaseTx(pubKey)
-	Credit.ChainYear = ChainYear
-	Credit.BlockNumber = blockNumber
-	Credit.Time = time.Now()
-	Credit.TxHash = Credit.HashBaseTx(pubKey)
-	Credit.Amount = amt
-	Tx.Change.TxHash = Tx.Change.HashBaseTx(pubKey)
-	Tx.Debit =append(Tx.Debit, Debit)
-	Tx.Credit = append(Tx.Credit, Credit)
-	Tx.OTP = node.Id
-	Tx.TxHash = Tx.HashTx(Tx.OTP)
-	Tx.R, Tx.S err := crypto.sign(Tx.Hash, node.PrvKey)
-	Tx.Payout = TRUE
-	return Tx
-	
-}
-func (node *Node) sellItem(item Item) {
-	prvKey := GenerateRSAKey()
-	node.Comms.RsaPrvKeys[prvKey.PublicKey] = prvKey
-	item.Seller = prvKey.PublicKey
-	node.Items.Selling.Item = append(node.Items.Selling.Item, item)
-
-	
-}

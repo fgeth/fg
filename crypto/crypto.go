@@ -94,12 +94,12 @@ type SignedTx struct {
 
 
 
-func Sign(hash Hash, prvKey *ecdsa.PrivateKey ) (*big.Int, *big.Int, error){
+func Sign(hash Hash, prvKey *ecdsa.PrivateKey ) (*big.Int, *big.Int){
 	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
-	return r, s, err
+	return r, s
 
 }
 

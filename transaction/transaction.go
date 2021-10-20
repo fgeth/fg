@@ -17,13 +17,14 @@ var (
 )
 
 type BaseTransaction struct {
-	ChainYear			uint32						//Chain Transaction belongs to	
+	ChainYear			uint64						//Chain Transaction belongs to	
 	BlockNumber			uint64						//Block Number Transaction was created in
 	Time				time.Time					//Time Transaction was Created time.now()
 	Amount				*big.Int					//Amount in FGs
 	TxHash				crypto.Hash					//Hash of  ChainYear, Time, and amount plus OTP if Debit Transaction
 	Spent				crypto.Hash					//Hash of Transaction were the Debit Balance of this Transaction was spent
 	TxId				crypto.Hash					//Hash the Transaction that this Base Transaction is a part of as a Debit Transaction
+	OTP					string
 	
 	
 }

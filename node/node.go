@@ -32,7 +32,7 @@ type Nodes struct {
 
 type Comm struct{
 
-	RsaPrvKeys		map[rsa.PublicKey][]rsa.PrivateKey	//index is the RSA publicKey
+	RsaPrvKeys		map[rsa.PublicKey]rsa.PrivateKey	//index is the RSA publicKey
 
 	
 }
@@ -43,6 +43,9 @@ type Selling struct {
 	
 }
 
+func (node *Node) SaveNode(){
+
+}
 
 
 
