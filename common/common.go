@@ -152,7 +152,12 @@ func CreateBlock( blockNumber uint64) block.Block{
 			BTx	 = append (BTx, WritersTx[x])
 		}
 		var block  block.Block
-		block.ChainYear = ChainYear
+		t := time.Now()
+		if uint64(t.Year())> ChainYear{
+			block.ChainYear = ChainYear + uint64(1)
+		}else{
+			block.ChainYear = ChainYear
+		}
 		block.BlockNumber = blockNumber
 		block.FGValue = FGValue
 		block.Txs = blockTx
@@ -173,6 +178,12 @@ func CreateBlock( blockNumber uint64) block.Block{
 //TODO Recreate Block Failed
 func BlockFailed(blockNumber uint64){
 
+}
+
+//TODO Create validate Block
+func ValidateBlock(block block.Block) bool{
+	
+	return true
 }
 func ElectNodes(block block.Block) []uint64{
 
@@ -227,7 +238,7 @@ func ElectNodes(block block.Block) []uint64{
 	return blockNode
 }
 
-func VerifyBlock(block *block.Block){
+func VerifyBlock(block *block.Block) bool{
 	numNodes := 0
 	for x:=0; x < len(block.Signed); x +=1{
 		if block.VerifyWriters(){
@@ -247,9 +258,15 @@ func VerifyBlock(block *block.Block){
 		//Verify that Block Leader and a Block Node signed the Block
 	if numNodes > 1{
 		//TODO Store Block to file, Replace Previous Block wtih This Block, 
-		block.SaveBlock()
+		if bytes.Compare(block.BlockHash, block.HashBlock()) ==0{	
+			
+			if bytes.Compare(block.PBHash, PB.BlockHash) ==0{
+				return true
+			}
+		}
 		
 	}
+	return false
 
 }
 func GetWrtiers(nodes []uint64) []string{

@@ -14,7 +14,7 @@ import(
 	"syscall"
 	"time"
 	"github.com/gorilla/mux"
-	//"github.com/fgeth/fg/block"
+	"github.com/fgeth/fg/block"
 	"github.com/fgeth/fg/common"
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
@@ -66,7 +66,7 @@ func server(){
 	//r.HandleFunc("/getTxs", sendTxs).Methods("GET")
 	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
 	//r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
-	//r.HandleFunc("/block", createNewBlock).Methods("POST")
+	r.HandleFunc("/block", createNewBlock).Methods("POST")
 	//r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
 	http.Handle("/", r)
@@ -101,6 +101,19 @@ func CloseHandler() {
 		os.Exit(0)
 	}()
 }
+
+func createNewBlock(w http.ResponseWriter, r *http.Request) {
+	reqBody, _ := ioutil.ReadAll(r.Body)
+    var block block.Block
+    json.Unmarshal(reqBody, &block)
+	if common.VerifyBlock(&block){
+		block.SaveBlock()
+		common.BlockNumber = block.BlockNumber
+		
+		json.NewEncoder(w).Encode(block)
+	}
+}
+
 //TODO Fix this
 func register() bool{
 	haveNode := false
