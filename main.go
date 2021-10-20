@@ -29,6 +29,7 @@ func main(){
 	
 	common.MyNode = NewNode()
 	common.MyNode.SaveNode()
+	if len(os.Args)>1{
 	switch os.Args[1]{
 	case "Gen":
 		fmt.Println("Genesis Block")
@@ -38,15 +39,17 @@ func main(){
 	case "Node":
 		time.Sleep(time.Second * 60)
 		os.Exit(0)
-	default:
+
+	}
+	}else{
 		go register()
-		common.ImportBlocks()
-		common.ImportTxs()
-		common.GetBlocks()
-		common.GetTxs()
+		//common.ImportBlocks()
+		//common.ImportTxs()
+		//common.GetBlocks()
+		//common.GetTxs()
 	}
 	wg.Add(1)
-	go server()
+	server()
 	go fg()
 	go CloseHandler()
 	wg.Wait()
@@ -67,6 +70,7 @@ func server(){
 	//r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
 	http.Handle("/", r)
+	fmt.Println("Listening on port 42069")
 if err := http.ListenAndServe(":42069", nil); err != nil {
 	    	log.Fatal(err)
 	   }
