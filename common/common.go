@@ -311,12 +311,12 @@ func VerifyBlock(block *block.Block) bool{
 	for x:=0; x < len(block.Signed); x +=1{
 		if block.VerifyBlock(PB){
 				if (len(block.Txs) ==1000) && (CompareWriters(block.Writers,PB.Writers)){
-					if block.FGValue - PB.FGValue <=.1{
+					if block.FGValue - PB.FGValue <=.01{
 						numNodes +=1
 					}
 				}else{
 					
-					if CompareWriters(block.Writers, GetWrtiers(ElectNodes(*block))){
+					if CompareWriters(block.Writers, block.GetWriters(ElectNodes(*block))){
 						numNodes +=1
 					}
 				}
@@ -329,8 +329,18 @@ func VerifyBlock(block *block.Block) bool{
 		if bytes.Compare(block.BlockHash, block.HashBlock()) ==0{	
 			
 			if bytes.Compare(block.PBHash, PB.BlockHash) ==0{
+				if CheckBlock(block){
+					CB := ImportBlock(block)		// current saved block need to add the other block signatures
+					for x:=0; x < len(CB.Signed); x +=1{
+						if CB.VerifyBlock(PB){
+							block.Signed = append(block.Signed, CB.Signed[x])
+						}
+					}
+				}
 				block.SaveBlock()
-				SwapBlocks(block)
+				if BlockNumber < block.BlockNumber{
+					SwapBlocks(block)
+				}
 				return true
 			}
 		}
@@ -339,12 +349,30 @@ func VerifyBlock(block *block.Block) bool{
 	return false
 
 }
-func GetWrtiers(nodes []uint64) []string{
-	var writers []string
-	for x:=0; x < len(nodes); x +=1{
-		writers = append(writers, ActiveNodes[nodes[x]])
+
+func CheckBlock(block *block.Block) bool{
+	dirname, err := os.UserHomeDir()
+
+    if err != nil {
+        fmt.Println( err )
+    }
+    fmt.Println( dirname )
+	path :=filepath.Join(dirname, "fg", "chain", strconv.FormatUint(block.ChainYear, 10))
+
+	fileName := filepath.Join(path, strconv.FormatUint(block.BlockNumber, 10))
+	myfile, e := os.Stat(fileName)
+	if e != nil{
+	  fmt.Println( e )
+	  return false
 	}
-	return writers
+	fmt.Println( myfile )
+	return true
+
+}
+
+func ImportBlock(CB *block.Block) block.Block{
+	return block.ImportBlock(CB.ChainYear, CB.BlockNumber)
+
 }
 
 func CompareWriters(writers []string, theWriters []string) bool{

@@ -97,6 +97,7 @@ func (block *Block) SaveBlock(){
 
 func ImportBlock(chainYear uint64, blockNumber uint64) Block{
 	dirname, err := os.UserHomeDir()
+	var block Block
     if err != nil {
         fmt.Println( err )
     }
@@ -104,13 +105,26 @@ func ImportBlock(chainYear uint64, blockNumber uint64) Block{
 	path :=filepath.Join(dirname, "fg", "chain", strconv.FormatUint(chainYear, 10))
 
 	fileName := filepath.Join(path, strconv.FormatUint(blockNumber, 10))
-	file, _ := ioutil.ReadFile(fileName)
-	var block Block
- 	_ = json.Unmarshal([]byte(file), &block)
-	
+	myfile, e := os.Stat(fileName)
+	if e != nil{
+	  fmt.Println( e )
+	}else{
+		file, _ := ioutil.ReadFile(myfile.Name())
+		
+		_ = json.Unmarshal([]byte(file), &block)
+		
+		
+	}
 	return block
 }
 
+func (block *Block) GetWriters(nodes []uint64) []string{
+	var writers []string
+	for x:=0; x < len(nodes); x +=1{
+		writers = append(writers, block.Nodes[nodes[x]])
+	}
+	return writers
+}
 func (block *Block) VerifyBlock(PB *Block) bool{
 	return block.VerifyWriters(PB)
 
