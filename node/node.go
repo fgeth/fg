@@ -22,7 +22,7 @@ type Node struct {
 	NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
 	Comms			Comm							//Node RSA Keys
 	Items			Selling							//Items that are for sell
-	Mtx	 			sync.Mutex
+	
 }
 
 type Nodes struct {

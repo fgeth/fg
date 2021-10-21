@@ -20,14 +20,13 @@ import (
 
 var (
 	ChainYear			uint64							//Current Year
-	BlockNumber			uint64							//Current Block
+	BlockNumber			uint64							//Current Block Number
 	ActiveNodes			[]string						//Array of known active Nodes Public Key as string
-	PB					block.Block						//Last Know Verified Block
-	Tx					[]transaction.Transaction		//Last Know Verified Block Transactions
+	PB					block.Block						//Current Block This is the Last Know Verified Block
+	Tx					[]transaction.Transaction		//Last Known Verified Block Transactions
 	PBTx				[]transaction.Transaction		//Previous Block Transactions
 	BTx					[]transaction.Transaction		//Used to Store Transactions for Pending Block
 	PTx					[]crypto.Hash					//Array of Transaction Hashes for Pending Block
-	BlockReward			*big.Int						//Amount of FG in Block Reward paid to Block Writers and Leader
 	Chain				chain.Chain						//Current Chain
 	Chains				chain.Chains					//All Past Year Chains 
 	FGValue				float64							//The Value of 1 FG
@@ -40,9 +39,69 @@ var (
 	TTx					[]transaction.Transaction	    //Used to Transfer Transactions To Nodes One Block at a Time	
 	Items				map[string]item.Item			//Index is Item Id
 	MyNode				*node.Node
-	
+	Mtx	 				sync.Mutex
 )
 
+//Increments ChainYear by one
+func IncChainYear(){
+	Mtx.lock()
+	ChainYear + uint64(1)
+	Mtx.Unlock()
+	
+}
+
+
+
+//Swap Pervious Block with now Current Block
+func ChangeBlocks(block Block){
+	Mtx.lock()
+	BlockNumber + uint64(1)
+	PB = block
+	Mtx.Unlock()
+}
+
+//Add Transaction to Last Known Verified Block Transactions
+func SwapTransaction(){
+	Mtx.lock()
+	PBTx = Tx
+	Tx = BTx
+	BTx = nil
+	Mtx.Unlock()
+
+}
+
+//Trims Pending block transaction hashes since htere were over 1,000 trnasactions these need to be move to the next block
+func trimPTx(){
+	Mtx.Lock()
+	if len(PTx) > 1000{
+		var tmpTx  []crypto.Hash
+		for x :=1000; x < len(PTx); x+=1{
+			tmpTx = append(tmpTx, PTx[x])
+		}
+		
+		PTx = tmpTx
+		
+	}
+	Mtx.Unlock()
+	time.Sleep(2 * time.Second) 
+	CreateBlock()	
+}
+
+
+//Adds Transaction to Pending Block Transaction array
+func AddBTX(tx transaction.Transaction){
+	Mtx.Lock()
+	BTx	 = append (BTx, tx)
+	Mtx.Unlock()
+}
+
+//Swap out Active Nodes Array
+func SwapActiveNodes(an []string){
+	Mtx.Lock()
+	ActiveNodes = an
+	Mtx.Unlock()
+
+}
 
 func FG2USD(amount *big.Int) float64{
     fg := new(big.Int)
@@ -81,12 +140,14 @@ func USD2FG(amount float64) *big.Int{
 	
 }
 
-func CreateBlock( blockNumber uint64) block.Block{
+func CreateBlock( ) block.Block{
+	blockNumber:= BlockNumber + uint64(1)
 	NumTxs := uint64(len(PTx))
 	var blockTx  []crypto.Hash
 	TxFees :=big.NewInt(0)
+	MultiBlock :=false
 	if NumTxs > 1000{
-		
+		MultiBlock = true
 		for x:=0; x < 1000; x +=1{
 			blockTx = append (blockTx, PTx[x])
 			percentage := big.NewInt(100)
@@ -95,7 +156,7 @@ func CreateBlock( blockNumber uint64) block.Block{
 				TxFees = TxFees.Add(TxFees,txFee)
 			}
 		}
-		go trimPTx()
+		
 	}else{
 		blockTx = PTx
 	}
@@ -143,21 +204,22 @@ func CreateBlock( blockNumber uint64) block.Block{
 	NodeTx := PayOutNodes(TxFees, blockNumber)	
 	for x:=0; x < len(NodeTx); x +=1{
 			blockTx = append (blockTx, NodeTx[x].TxHash)
-			BTx	 = append (BTx, NodeTx[x])
+			AddBTX(NodeTx[x])
+			
 			
 		}
 	WritersTx := PayOutWriters(BlockReward, blockNumber)	
 	for x:=0; x < len(WritersTx); x +=1{
 			blockTx = append (blockTx, WritersTx[x].TxHash)
-			BTx	 = append (BTx, WritersTx[x])
+			AddBTX(WritersTx[x])
 		}
 		var block  block.Block
 		t := time.Now()
 		if uint64(t.Year())> ChainYear{
-			block.ChainYear = ChainYear + uint64(1)
-		}else{
-			block.ChainYear = ChainYear
+			IncChainYear()
+			block.ChainYear = 
 		}
+		block.ChainYear = ChainYear
 		block.BlockNumber = blockNumber
 		block.FGValue = FGValue
 		block.Txs = blockTx
@@ -167,13 +229,21 @@ func CreateBlock( blockNumber uint64) block.Block{
 		block.NodePayout = NodeTx[0].Debit[0].Amount
 		block.WriterPayout = WritersTx[0].Debit[0].Amount
 		block.BlockHash = block.HashBlock()
-		nodeVals := ElectNodes(block)
-	for x:=0; x < len(nodeVals); x +=1{
-		block.Writers = append(block.Writers, block.Nodes[nodeVals[x]])
-	}
-
+		if MultiBlock{
+			block.Writers = PB.Writers
+			go trimPTx()
+		}else{
+			nodeVals := ElectNodes(block)
+			for x:=0; x < len(nodeVals); x +=1{
+				block.Writers = append(block.Writers, block.Nodes[nodeVals[x]])
+			}
+		}
+			
+		ChangeBlocks(block)
+		block.SaveBlock()
 	 return block
 }
+
 
 //TODO Recreate Block Failed
 func BlockFailed(blockNumber uint64){
@@ -182,7 +252,7 @@ func BlockFailed(blockNumber uint64){
 
 //TODO Create validate Block
 func ValidateBlock(block block.Block) bool{
-	
+	block.VerifyBlock()
 	return true
 }
 func ElectNodes(block block.Block) []uint64{
@@ -459,15 +529,7 @@ func ImportTxs() {
 	_ = json.Unmarshal([]byte(file), &tx)
 }
 
-func trimPTx(){
-	if len(PTx) > 1000{
-		var tmpTx  []crypto.Hash
-		for x :=1000; x < len(PTx); x+=1{
-			tmpTx = append(tmpTx, PTx[x])
-		}
-		PTx = tmpTx
-	}
-}
+
 
 
 func AllItemsInDir() {

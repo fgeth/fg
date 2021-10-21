@@ -28,6 +28,7 @@ type Block struct {
 	BlockFailed			bool						//Used if Block fails to be created something happens to all Block Nodes
 	NodePayout			*big.Int						//Amount paid out to each Acitve Nodes when Block is created
 	WriterPayout		*big.Int						//Amount paid out to each Blcok Writer includes Block Leader when Blcok is Created
+	BlockReward			*big.Int						//Amount of FG in Block Reward paid to Block Writers and Leader
 	
 }
 
@@ -110,14 +111,18 @@ func ImportBlock(chainYear uint64, blockNumber uint64) Block{
 	return block
 }
 
+func (block *Block) VerifyBlock() bool{
+	return block.VerifyWriters()
+
+}
 
 
 func (block *Block) VerifyWriters( ) bool{
 	Signed :=0
-	NumWriters := len(block.Writers)
+	NumWriters := len(PB.Writers)
 	for x:=0; x < NumWriters; x +=1{
 		for w:=0; w < NumWriters; w +=1{
-		if block.Signed[x].NodeId == block.Writers[w]{
+		if block.Signed[x].NodeId == PB.Writers[w]{
 			if block.VerifySig(w){
 				Signed +=1
 			}
