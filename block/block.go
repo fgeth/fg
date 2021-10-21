@@ -111,13 +111,13 @@ func ImportBlock(chainYear uint64, blockNumber uint64) Block{
 	return block
 }
 
-func (block *Block) VerifyBlock() bool{
-	return block.VerifyWriters()
+func (block *Block) VerifyBlock(PB *Block) bool{
+	return block.VerifyWriters(PB)
 
 }
 
 
-func (block *Block) VerifyWriters( ) bool{
+func (block *Block) VerifyWriters(PB *Block) bool{
 	Signed :=0
 	NumWriters := len(PB.Writers)
 	for x:=0; x < NumWriters; x +=1{

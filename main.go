@@ -184,8 +184,8 @@ func NewNode() *node.Node{
 	var node *node.Node
 	return node
 }
-func newBlock(blockNumber uint64){
-	common.CreateBlock( blockNumber )
+func newBlock(){
+	common.CreateBlock(  )
 }
 
 func verifyTx(OTP string, Tx transaction.Transaction) transaction.Transaction{

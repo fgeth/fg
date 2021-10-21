@@ -5,7 +5,6 @@ package node
 import (
 	"crypto/rsa"
 	"crypto/ecdsa"
-	"sync"
 	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/transaction"
 

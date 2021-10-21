@@ -9,6 +9,7 @@ import (
 	 "os"
 	 "path/filepath"
 	 "strconv"
+	 "sync"
 	 "time"
 	 "github.com/fgeth/fg/block"
 	 "github.com/fgeth/fg/chain"
@@ -22,7 +23,7 @@ var (
 	ChainYear			uint64							//Current Year
 	BlockNumber			uint64							//Current Block Number
 	ActiveNodes			[]string						//Array of known active Nodes Public Key as string
-	PB					block.Block						//Current Block This is the Last Know Verified Block
+	PB					*block.Block						//Current Block This is the Last Know Verified Block
 	Tx					[]transaction.Transaction		//Last Known Verified Block Transactions
 	PBTx				[]transaction.Transaction		//Previous Block Transactions
 	BTx					[]transaction.Transaction		//Used to Store Transactions for Pending Block
@@ -44,25 +45,26 @@ var (
 
 //Increments ChainYear by one
 func IncChainYear(){
-	Mtx.lock()
-	ChainYear + uint64(1)
+	Mtx.Lock()
+	ChainYear += uint64(1)
 	Mtx.Unlock()
-	
+	fmt.Println(ChainYear)
 }
 
 
 
 //Swap Pervious Block with now Current Block
-func ChangeBlocks(block Block){
-	Mtx.lock()
-	BlockNumber + uint64(1)
+func SwapBlocks(block *block.Block){
+	Mtx.Lock()
+	BlockNumber +=  uint64(1)
 	PB = block
 	Mtx.Unlock()
+	fmt.Println(BlockNumber)
 }
 
 //Add Transaction to Last Known Verified Block Transactions
 func SwapTransaction(){
-	Mtx.lock()
+	Mtx.Lock()
 	PBTx = Tx
 	Tx = BTx
 	BTx = nil
@@ -217,7 +219,7 @@ func CreateBlock( ) block.Block{
 		t := time.Now()
 		if uint64(t.Year())> ChainYear{
 			IncChainYear()
-			block.ChainYear = 
+			block.ChainYear = ChainYear
 		}
 		block.ChainYear = ChainYear
 		block.BlockNumber = blockNumber
@@ -239,7 +241,7 @@ func CreateBlock( ) block.Block{
 			}
 		}
 			
-		ChangeBlocks(block)
+		SwapBlocks(&block)
 		block.SaveBlock()
 	 return block
 }
@@ -250,11 +252,7 @@ func BlockFailed(blockNumber uint64){
 
 }
 
-//TODO Create validate Block
-func ValidateBlock(block block.Block) bool{
-	block.VerifyBlock()
-	return true
-}
+
 func ElectNodes(block block.Block) []uint64{
 
 	numTx := (PB.NumTxs/500)+1
@@ -311,7 +309,7 @@ func ElectNodes(block block.Block) []uint64{
 func VerifyBlock(block *block.Block) bool{
 	numNodes := 0
 	for x:=0; x < len(block.Signed); x +=1{
-		if block.VerifyWriters(){
+		if block.VerifyBlock(PB){
 				if (len(block.Txs) ==1000) && (CompareWriters(block.Writers,PB.Writers)){
 					if block.FGValue - PB.FGValue <=.1{
 						numNodes +=1
@@ -331,6 +329,8 @@ func VerifyBlock(block *block.Block) bool{
 		if bytes.Compare(block.BlockHash, block.HashBlock()) ==0{	
 			
 			if bytes.Compare(block.PBHash, PB.BlockHash) ==0{
+				block.SaveBlock()
+				SwapBlocks(block)
 				return true
 			}
 		}
