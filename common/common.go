@@ -39,8 +39,9 @@ var (
 	NumTx				int64							//Keeps track of number of Transactions resets at 1,000 Transactions and FGValue is bumped .01
 	TTx					[]transaction.Transaction	    //Used to Transfer Transactions To Nodes One Block at a Time	
 	Items				map[string]item.Item			//Index is Item Id
-	MyNode				*node.Node
+	MyNode				node.Node
 	Mtx	 				sync.Mutex
+	Path				string							//Path to Data dirctory
 )
 
 //Increments ChainYear by one
@@ -143,6 +144,8 @@ func USD2FG(amount float64) *big.Int{
 }
 
 func CreateBlock( ) block.Block{
+var block  block.Block
+if MyNode.Leader{
 	blockNumber:= BlockNumber + uint64(1)
 	NumTxs := uint64(len(PTx))
 	var blockTx  []crypto.Hash
@@ -215,7 +218,7 @@ func CreateBlock( ) block.Block{
 			blockTx = append (blockTx, WritersTx[x].TxHash)
 			AddBTX(WritersTx[x])
 		}
-		var block  block.Block
+		
 		t := time.Now()
 		if uint64(t.Year())> ChainYear{
 			IncChainYear()
@@ -242,8 +245,10 @@ func CreateBlock( ) block.Block{
 		}
 			
 		SwapBlocks(&block)
-		block.SaveBlock()
-	 return block
+		block.SaveBlock(MyNode.Path)
+	 
+	}
+	return block
 }
 
 
@@ -337,7 +342,7 @@ func VerifyBlock(block *block.Block) bool{
 						}
 					}
 				}
-				block.SaveBlock()
+				block.SaveBlock(MyNode.Path)
 				if BlockNumber < block.BlockNumber{
 					SwapBlocks(block)
 				}
@@ -444,10 +449,10 @@ func CreatePayoutTransaction(amt *big.Int, pubKey string, blockNumber uint64) tr
 	
 }
 func SellItem(item item.Item) {
-	prvKey := crypto.GenerateRSAKey()
-	MyNode.Comms.RsaPrvKeys[prvKey.PublicKey] = prvKey
-	item.Seller = prvKey.PublicKey
-	MyNode.Items.Item = append(MyNode.Items.Item, item)
+	//prvKey := crypto.GenerateRSAKey()
+	//MyNode.Comms.RsaPrvKeys[prvKey.PublicKey] = prvKey
+	//item.Seller = prvKey.PublicKey
+	//MyNode.Items.Item = append(MyNode.Items.Item, item)
 
 	
 }

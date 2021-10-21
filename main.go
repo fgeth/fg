@@ -3,6 +3,7 @@ package main
 import(
 	"bytes"
 	"fmt"
+	"flag"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -16,31 +17,43 @@ import(
 	"github.com/gorilla/mux"
 	"github.com/fgeth/fg/block"
 	"github.com/fgeth/fg/common"
+	"github.com/fgeth/fg/crypto"
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
 )
 var (
 
 	wg 		 sync.WaitGroup
-
+	path	  string
+	port 	  string
+	ip		  string
+	Gen		  *bool
+	
 )
 
-func main(){
+func init() {
+	flag.StringVar(&port, "port", "42069", "Default Port")
+	flag.StringVar(&path, "path", "42069", "Data Directory")
+	flag.StringVar(&ip, "ip", "127.0.0.1", "Default IP")
+	Gen = flag.Bool("Gen", false, "Continue with existing chain")
 	
-	common.MyNode = NewNode()
-	common.MyNode.SaveNode()
-	if len(os.Args)>1{
-	switch os.Args[1]{
-	case "Gen":
+}
+
+func main(){	
+	flag.Parse()
+	
+	common.MyNode = node.ImportNode(path)
+	fmt.Println("Node Id is :" , common.MyNode.Id)
+	if common.MyNode.Id ==""{
+		common.MyNode = NewNode()
+	}
+	//0x5282f5302ce876C14c2e39aca78b17176b7403e5
+	common.MyNode.SaveNode(common.MyNode.Path)
+	if *Gen{
 		fmt.Println("Genesis Block")
 		//common.ImportBlocks()
 		//common.ImportTxs()
 		common.SignGenesisBlocks() 
-	case "Node":
-		time.Sleep(time.Second * 60)
-		os.Exit(0)
-
-	}
 	}else{
 		go register()
 		//common.ImportBlocks()
@@ -70,8 +83,8 @@ func server(){
 	//r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
 	http.Handle("/", r)
-	fmt.Println("Listening on port 42069")
-if err := http.ListenAndServe(":42069", nil); err != nil {
+	fmt.Println("Listening on port :", port)
+if err := http.ListenAndServe(common.MyNode.Port, nil); err != nil {
 	    	log.Fatal(err)
 	   }
 	   
@@ -107,7 +120,7 @@ func createNewBlock(w http.ResponseWriter, r *http.Request) {
     var block block.Block
     json.Unmarshal(reqBody, &block)
 	if common.VerifyBlock(&block){
-		block.SaveBlock()
+		block.SaveBlock(common.MyNode.Path)
 		common.BlockNumber = block.BlockNumber
 		
 		json.NewEncoder(w).Encode(block)
@@ -180,8 +193,16 @@ func buildTransaction(){
 	
 }
 
-func NewNode() *node.Node{
-	var node *node.Node
+func NewNode() node.Node{
+	var node node.Node
+	node.PrvKey, _ = crypto.GenerateKey()
+	node.PubKey = &node.PrvKey.PublicKey
+	node.Id = crypto.GetAddress(node.PubKey) 
+	node.Port = ":"+ port
+	node.Path = path
+	node.Ip = ip
+	node.Leader = false
+	node.Writer =false
 	return node
 }
 func newBlock(){

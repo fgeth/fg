@@ -67,11 +67,11 @@ func (block *Block) HashBlock() crypto.Hash{
 }
 
 
-func (block *Block) SaveBlock(){
-	dirname, err := os.UserHomeDir()
-    if err != nil {
-        fmt.Println( err )
-    }
+func (block *Block) SaveBlock(dirname string){
+	//dirname, err := os.UserHomeDir()
+   // if err != nil {
+     //   fmt.Println( err )
+    //}
  
 	path :=filepath.Join(dirname, "fg", "chain", strconv.FormatUint(block.ChainYear, 10))
 	 

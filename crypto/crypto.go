@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
     "encoding/pem"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -49,13 +50,14 @@ var (
     specialCharSet = "!@#$%&*"
     numberSet      = "0123456789"
     allCharSet     = lowerCharSet + upperCharSet + specialCharSet + numberSet
+	AddressLength = 20
 )
 
 
 
 
 
-
+type Address [20]byte
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash []byte
 
@@ -182,10 +184,70 @@ func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, s
 func EncodePubKey( publicKey *ecdsa.PublicKey) (string) {
     
     x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
-    pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+	pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
 
     return string(pemEncodedPub)
 }
+
+func GetAddress( publicKey *ecdsa.PublicKey) (string){
+   x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+	a := BytesToAddress(x509EncodedPub)
+	
+	//fmt.Println(a.Hex())
+	return a.Hex()
+
+}
+func BytesToAddress(b []byte) Address {
+	var a Address
+	a.SetBytes(b)
+	return a
+}
+
+// Hex returns an EIP55-compliant hex string representation of the address.
+func (a Address) Hex() string {
+	return string(a.checksumHex())
+}
+
+// String implements fmt.Stringer.
+func (a Address) String() string {
+	return a.Hex()
+}
+
+func (a *Address) checksumHex() []byte {
+	buf := a.hex()
+
+	// compute checksum
+	sha := sha3.NewLegacyKeccak256()
+	sha.Write(buf[2:])
+	hash := sha.Sum(nil)
+	for i := 2; i < len(buf); i++ {
+		hashByte := hash[(i-2)/2]
+		if i%2 == 0 {
+			hashByte = hashByte >> 4
+		} else {
+			hashByte &= 0xf
+		}
+		if buf[i] > '9' && hashByte > 7 {
+			buf[i] -= 32
+		}
+	}
+	return buf[:]
+}
+func (a Address) hex() []byte {
+	var buf [len(a)*2 + 2]byte
+	copy(buf[:2], "0x")
+	hex.Encode(buf[2:], a[:])
+	return buf[:]
+}
+
+
+func (a *Address) SetBytes(b []byte) {
+	if len(b) > len(a) {
+		b = b[len(b)-AddressLength:]
+	}
+	copy(a[AddressLength-len(b):], b)
+}
+
 
 func DecodePubKey( pemEncodedPub string) (*ecdsa.PublicKey) {
    
