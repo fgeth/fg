@@ -2,6 +2,7 @@ package main
 
 import(
 	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 	"flag"
 	"encoding/json"
@@ -11,6 +12,7 @@ import(
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -26,16 +28,17 @@ var (
 	wg 		 sync.WaitGroup
 	path	  string
 	port 	  string
-	ip		  string
+	ipAddress  string
 	Gen		  *bool
+
 	
 )
 
 func init() {
-	flag.StringVar(&port, "port", "42069", "Default Port")
-	flag.StringVar(&path, "path", "42069", "Data Directory")
-	flag.StringVar(&ip, "ip", "127.0.0.1", "Default IP")
-	Gen = flag.Bool("Gen", false, "Continue with existing chain")
+			flag.StringVar(&port, "port", "42069", "Default Port")
+			flag.StringVar(&path, "path", "/var/fg", "Data Directory")
+			flag.StringVar(&ipAddress, "ip", "127.0.0.1", "Default IP")
+	Gen = 	flag.Bool("gen", false, "Continue with existing chain")
 	
 }
 
@@ -43,12 +46,32 @@ func main(){
 	flag.Parse()
 	
 	common.MyNode = node.ImportNode(path)
-	fmt.Println("Node Id is :" , common.MyNode.Id)
+	
 	if common.MyNode.Id ==""{
 		common.MyNode = NewNode()
+
+	}else{
+		if common.MyNode.PKStr !=""{
+			common.MyNode.PubKey = crypto.DecodePubKey(common.MyNode.PKStr)
+		}
+		if common.MyNode.PRKStr !=""{
+			common.MyNode.PrvKey = crypto.DecodePrv(common.MyNode.PRKStr)
+		}
 	}
-	//0x5282f5302ce876C14c2e39aca78b17176b7403e5
+	Trusted()
+	if port !="42069"{
+		common.MyNode.Port = ":"+port
+		}
+	if ipAddress !="127.0.0.1"{
+		common.MyNode.Ip = ipAddress
+	}
+	directory()
 	common.MyNode.SaveNode(common.MyNode.Path)
+	fmt.Println("Node Id is :" , common.MyNode.Id)
+	fmt.Println("Node Ip is :" , common.MyNode.Ip)
+	fmt.Println("Node Path is :" , common.MyNode.Path)
+	test()
+
 	if *Gen{
 		fmt.Println("Genesis Block")
 		//common.ImportBlocks()
@@ -62,11 +85,92 @@ func main(){
 		//common.GetTxs()
 	}
 	wg.Add(1)
+
 	server()
 	go fg()
 	go CloseHandler()
 	wg.Wait()
 	
+}
+
+func Trusted(){
+	fg1 :="-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7mqd2vQKqyk/Xy171L/0YFnqT4Uy\nfXJeUmK41oNakzblaAbOTjnrVwt3LRt1tdtl4Um+gld87Vz860GcF4os+w==\n-----END PUBLIC KEY-----\n"
+	pubKey := crypto.DecodePubKey(fg1)
+	common.Trusted = append(common.Trusted, pubKey)
+	add := crypto.GetAddress(pubKey)
+	//key := crypto.UnSetBytes(add)
+	fmt.Println("PubKey Address :", add)
+	addHash := crypto.HashTx([]byte(add))
+	R, S  := crypto.TxSign([]byte(addHash), common.MyNode.PrvKey)
+	trusted := crypto.TxVerify([]byte(addHash), R, S, pubKey)
+	fmt.Println("This is a trusted Node :", trusted)
+	//trusted = crypto.TxVerify([]byte(addHash), R, S, key)
+	//fmt.Println("This is a trusted Node :", trusted)
+	//0xe56806Ce4e39Eb570b772d1B75B5dB65e149be82577ceD5cfceB419c178A2cFb
+							  //0x75b5Db65e149be82577CED5CfCeb419c178a2cFb
+}
+
+func test(){
+	BlockReward:= big.NewInt(0)
+	BlockReward.SetString("10000000000000000000", 10)
+	bn :=common.BlockNumber + uint64(1)
+	k,_:=crypto.GenerateKey()
+	prvK, pubK := crypto.Encode(k,&k.PublicKey)
+	fmt.Println("Pvt Key:", prvK)
+	var keys  []*ecdsa.PrivateKey
+	keys = append(keys, k)
+	credit := common.CreateDebitTxs(BlockReward, pubK, bn)
+	var credits []transaction.BaseTransaction
+	credits = append(credits, credit)
+	tx1 :=common.CreateTransaction(BlockReward, credits, pubK,pubK, bn, keys )
+	fmt.Println("Tx ", tx1)
+	tx1.SaveTx(common.MyNode.Path)
+	add := crypto.BytesToAddress([]byte(tx1.TxHash))
+	fmt.Println("Address :", add)
+
+}
+func directory(){
+
+	fmt.Println("Creating Directories :", common.MyNode.Path) 
+	_, err := os.Stat(common.MyNode.Path)
+
+    if os.IsNotExist(err) {
+		err = os.Mkdir(common.MyNode.Path, 0755)
+		fmt.Println(err)
+		
+    }
+	path =filepath.Join(common.MyNode.Path, "node")
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) {
+		err = os.Mkdir(path, 0755)
+		fmt.Println(err)
+		
+    }
+	
+	path =filepath.Join(common.MyNode.Path, "blcok")
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) {
+		err = os.Mkdir(path, 0755)
+		fmt.Println(err)
+		
+    }
+	
+	path =filepath.Join(common.MyNode.Path, "tx")
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) {
+		err = os.Mkdir(path, 0755)
+		fmt.Println(err)
+		
+    }
+	
+	path =filepath.Join(common.MyNode.Path, "store")
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) {
+		err = os.Mkdir(path, 0755)
+		fmt.Println(err)
+		
+    }
+
 }
 func server(){
 	wg.Add(1)
@@ -83,7 +187,15 @@ func server(){
 	//r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
 	http.Handle("/", r)
-	fmt.Println("Listening on port :", port)
+	
+	
+	staticFileDirectory := http.Dir(path)
+	
+	staticFileHandler := http.StripPrefix("/store/", http.FileServer(staticFileDirectory))
+	
+	r.PathPrefix("/store/").Handler(staticFileHandler).Methods("GET")
+	
+	fmt.Println("Listening on port :", common.MyNode.Port)
 if err := http.ListenAndServe(common.MyNode.Port, nil); err != nil {
 	    	log.Fatal(err)
 	   }
@@ -176,12 +288,16 @@ func sendNewTransaction(w http.ResponseWriter, r *http.Request) {
 			common.BTxHash = append(common.BTxHash, tx.TxHash)
 		
 		}else{	
-			//common.SendTransaction(tx)
+			if !common.SendTransaction(tx){
+				bn := common.BlockNumber + uint64(1)
+				common.BlockFailed(bn)
+			}
 		}
 	
 		json.NewEncoder(w).Encode(tx)
 	}
 }
+
 
 func NewTransaction(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
@@ -198,13 +314,17 @@ func NewNode() node.Node{
 	node.PrvKey, _ = crypto.GenerateKey()
 	node.PubKey = &node.PrvKey.PublicKey
 	node.Id = crypto.GetAddress(node.PubKey) 
+	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
 	node.Port = ":"+ port
 	node.Path = path
-	node.Ip = ip
+	fmt.Println("Ip Address:", ipAddress)
+	node.Ip = ipAddress
 	node.Leader = false
 	node.Writer =false
 	return node
 }
+
+
 func newBlock(){
 	common.CreateBlock(  )
 }
@@ -219,9 +339,9 @@ func verifyTx(OTP string, Tx transaction.Transaction) transaction.Transaction{
 	for x:=0; x< len(Tx.Credit); x+=1{
 		txCreditAmt.Add(txCreditAmt, Tx.Credit[x].Amount)
 	}
-	for x:=0; x< len(Tx.Debit); x+=1{
-		txDebitAmt.Add(txDebitAmt, Tx.Debit[x].Amount)
-	}
+	
+	txDebitAmt.Add(txDebitAmt, Tx.Debit.Amount)
+
 	txInt := Tx.CalcInterest()
 	txFee := Tx.CalcFee()
 	txCAmt.Add(txInt, txCreditAmt)
@@ -231,7 +351,7 @@ func verifyTx(OTP string, Tx transaction.Transaction) transaction.Transaction{
 	txAcc.Sub(txAcc,txCAmt)
 	if (txAcc.Cmp(big.NewInt(0))==0){
 
-		if bytes.Compare(Tx.TxHash, Tx.HashTx()) ==0 {
+		if bytes.Compare([]byte(Tx.TxHash), []byte(Tx.HashTx())) ==0 {
 			if Tx.Payout == false{
 				return Tx
 				}

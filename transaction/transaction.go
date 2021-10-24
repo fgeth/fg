@@ -21,43 +21,58 @@ type BaseTransaction struct {
 	BlockNumber			uint64						//Block Number Transaction was created in
 	Time				time.Time					//Time Transaction was Created time.now()
 	Amount				*big.Int					//Amount in FGs
-	TxHash				crypto.Hash					//Hash of  ChainYear, Time, and amount plus OTP if Debit Transaction
-	Spent				crypto.Hash					//Hash of Transaction were the Debit Balance of this Transaction was spent
-	TxId				crypto.Hash					//Hash the Transaction that this Base Transaction is a part of as a Debit Transaction
-	OTP					string
-	
+	TxHash				string						//Hash of  ChainYear, Time, and amount plus OTP if Debit Transaction
+	Spent				string						//Hash of Transaction were the Debit Balance of this Transaction was spent
+	TxId				string						//Hash the Transaction that this Base Transaction is a part of as a Debit Transaction
+	OTP					string						//Public Key as string
+	R					*big.Int						//Part one of Signature of sender when they sign the transaction Hash
+	S					*big.Int						//Part two of Signature
 	
 }
 
 type Transaction struct {
-	TxHash				crypto.Hash					//Hash of Credit, Debit, and Change hashes plus OTP of sender
-    Debit				[]BaseTransaction
-	Change				  BaseTransaction				//Debit Transaction to give any change due to sender
+	TxHash				string				//Hash of Credit, Debit, and Change hashes plus OTP of sender
+    Debit				BaseTransaction
+	Change				BaseTransaction					//Debit Transaction to give any change due to sender
 	Credit				[]BaseTransaction
-	OTP					string						//One Time Password which is the Public Key as a string Used for this Transaction if present transaction value has been spent
-	R					*big.Int						//Part one of Signature of sender when they sign the transaction Hash
-	S					*big.Int						//Part two of Signature
 	Payout				bool
 }
-func (tx *BaseTransaction) SaveTx(){
-    dirname, err := os.UserHomeDir()
-    if err != nil {
-        fmt.Println( err )
-    }
+
+type BaseTxData struct{
+    ChainYear			uint64						//Chain Transaction belongs to	
+	BlockNumber			uint64						//Block Number Transaction was created in
+	Time				time.Time					//Time Transaction was Created time.now()
+	Amount				*big.Int					//Amount in FGs
+	OTP					string						//One Time Password which is the Public Key as a string Used for this Transaction if present transaction value has been spent
+
+}
+
+type TxData struct{
+    Debit				BaseTransaction
+	Change				BaseTransaction				//Debit Transaction to give any change due to sender
+	Credit				[]BaseTransaction
+	
+
+}
+func (tx *BaseTransaction) SaveTx(dirname string){
+    //dirname, err := os.UserHomeDir()
+    //if err != nil {
+    //    fmt.Println( err )
+    //}
  
-	path :=filepath.Join(dirname, "fg", "btx")
+	path :=filepath.Join(dirname, "btx")
 	 
 	folderInfo, err := os.Stat(path)
 	if folderInfo.Name() !="" {
 			fmt.Println("")
 	}
     if os.IsNotExist(err) {
-		err := os.Mkdir(filepath.Join(dirname, "fg"), 0755)
+		err := os.Mkdir(dirname, 0755)
 		fmt.Println(err)
 		err2 := os.Mkdir(path, 0755)
 		fmt.Println(err2)
     }
-	uintA, uintB, uintC, uintD := crypto.HashToUint64(tx.TxHash)
+	uintA, uintB, uintC, uintD := crypto.B32HashToUint64([]byte(tx.TxHash))
 	h1 := strconv.FormatUint(uintA, 10)
 	h2 := strconv.FormatUint(uintB, 10)
 	h3 := strconv.FormatUint(uintC, 10)
@@ -70,18 +85,18 @@ func (tx *BaseTransaction) SaveTx(){
 	_ = ioutil.WriteFile(fileName, file, 0644)
 
 }
-func ImportBaseTx(txHash crypto.Hash) BaseTransaction{
-	dirname, err := os.UserHomeDir()
-    if err != nil {
-        fmt.Println( err )
-    }
-	uintA, uintB, uintC, uintD := crypto.HashToUint64(txHash)
+func ImportBaseTx(txHash []byte, dirname string) BaseTransaction{
+	//dirname, err := os.UserHomeDir()
+    //if err != nil {
+    //    fmt.Println( err )
+    //}
+	uintA, uintB, uintC, uintD := crypto.B32HashToUint64(txHash)
 	h1 := strconv.FormatUint(uintA, 10)
 	h2 := strconv.FormatUint(uintB, 10)
 	h3 := strconv.FormatUint(uintC, 10)
 	h4 := strconv.FormatUint(uintD, 10)
 	theHash := h1 + h2 +h3 +h4
-	path :=filepath.Join(dirname, "fg", "btx", theHash )
+	path :=filepath.Join(dirname, "btx", theHash )
 	file, _ := ioutil.ReadFile(path)
 	var tx BaseTransaction
 	_ = json.Unmarshal([]byte(file), &tx)
@@ -89,49 +104,91 @@ func ImportBaseTx(txHash crypto.Hash) BaseTransaction{
 	return tx
 }
 
-func (tx *Transaction) SaveTx(){
-    dirname, err := os.UserHomeDir()
-    if err != nil {
-        fmt.Println( err )
-    }
- 
-	path :=filepath.Join(dirname, "fg", "tx")
+func (tx *Transaction) SaveTx(dirname string){
+    //dirname, err := os.UserHomeDir()
+    //if err != nil {
+    //    fmt.Println( err )
+    //}
+
+
+	path :=filepath.Join(dirname, "tx")
 	 
 	folderInfo, err := os.Stat(path)
-	if folderInfo.Name() !="" {
-			fmt.Println("")
-	}
     if os.IsNotExist(err) {
-		err := os.Mkdir(filepath.Join(dirname, "fg"), 0755)
+
+		err := os.Mkdir(dirname, 0755)
 		fmt.Println(err)
 		err2 := os.Mkdir(path, 0755)
 		fmt.Println(err2)
-    }
-	uintA, uintB, uintC, uintD := crypto.HashToUint64(tx.TxHash)
-	h1 := strconv.FormatUint(uintA, 10)
-	h2 := strconv.FormatUint(uintB, 10)
-	h3 := strconv.FormatUint(uintC, 10)
-	h4 := strconv.FormatUint(uintD, 10)
-	theHash := h1 + h2 +h3 +h4
-	fileName := filepath.Join(path,theHash)
-	fmt.Println(fileName)
-	file, _ := json.MarshalIndent(tx, "", " ")
- 
-	_ = ioutil.WriteFile(fileName, file, 0644)
+		}else{
+			fmt.Println(folderInfo)
+		}
+		fmt.Println("TxHash:",len(tx.TxHash))
+		uintA, uintB, uintC, uintD := crypto.B32HashToUint64([]byte(tx.TxHash))
+		h1 := strconv.FormatUint(uintA, 10)
+		h2 := strconv.FormatUint(uintB, 10)
+		h3 := strconv.FormatUint(uintC, 10)
+		h4 := strconv.FormatUint(uintD, 10)
+		theHash := h1 + h2 +h3 +h4
+		fileName := filepath.Join(path,theHash)
+		fmt.Println(fileName)
+		file, _ := json.MarshalIndent(tx, "", " ")
+	 
+		_ = ioutil.WriteFile(fileName, file, 0644)
+		
+		
+			uintA, uintB, uintC, uintD = crypto.B32HashToUint64([]byte(tx.Debit.TxHash))
+			h1 = strconv.FormatUint(uintA, 10)
+			h2 = strconv.FormatUint(uintB, 10)
+			h3 = strconv.FormatUint(uintC, 10)
+			h4 = strconv.FormatUint(uintD, 10)
+			theHash = h1 + h2 +h3 +h4
+			fileName = filepath.Join(path,theHash)
+			fmt.Println(fileName)
+			file, _ = json.MarshalIndent(tx.Debit, "", " ")
+		
+		_ = ioutil.WriteFile(fileName, file, 0644)
+	
+		for x:=0; x < len(tx.Credit); x +=1{
+			uintA, uintB, uintC, uintD = crypto.B32HashToUint64([]byte(tx.Credit[x].TxHash))
+			h1 = strconv.FormatUint(uintA, 10)
+			h2 = strconv.FormatUint(uintB, 10)
+			h3 = strconv.FormatUint(uintC, 10)
+			h4 = strconv.FormatUint(uintD, 10)
+			theHash = h1 + h2 +h3 +h4
+			fileName = filepath.Join(path,theHash)
+			fmt.Println(fileName)
+			file, _ = json.MarshalIndent(tx.Credit[x], "", " ")
+		 
+			_ = ioutil.WriteFile(fileName, file, 0644)
+		}
+		
+		
+			uintA, uintB, uintC, uintD = crypto.B32HashToUint64([]byte(tx.Change.TxHash))
+		h1 = strconv.FormatUint(uintA, 10)
+		h2 = strconv.FormatUint(uintB, 10)
+		h3 = strconv.FormatUint(uintC, 10)
+		h4 = strconv.FormatUint(uintD, 10)
+		theHash = h1 + h2 +h3 +h4
+		fileName = filepath.Join(path,theHash)
+		fmt.Println(fileName)
+		file, _ = json.MarshalIndent(tx.Change, "", " ")
+	 
+		_ = ioutil.WriteFile(fileName, file, 0644)
 
 }
-func ImportTx(txHash crypto.Hash) Transaction{
-	dirname, err := os.UserHomeDir()
-    if err != nil {
-        fmt.Println( err )
-    }
+func ImportTx(txHash crypto.Hash, dirname string) Transaction{
+	//dirname, err := os.UserHomeDir()
+    //if err != nil {
+    //    fmt.Println( err )
+    //}
 	uintA, uintB, uintC, uintD := crypto.HashToUint64(txHash)
 	h1 := strconv.FormatUint(uintA, 10)
 	h2 := strconv.FormatUint(uintB, 10)
 	h3 := strconv.FormatUint(uintC, 10)
 	h4 := strconv.FormatUint(uintD, 10)
 	theHash := h1 + h2 +h3 +h4
-	path :=filepath.Join(dirname, "fg", "tx", theHash )
+	path :=filepath.Join(dirname, "tx", theHash )
 	file, _ := ioutil.ReadFile(path)
 	var tx Transaction
 	_ = json.Unmarshal([]byte(file), &tx)
@@ -141,12 +198,10 @@ func ImportTx(txHash crypto.Hash) Transaction{
 
 
 func (tx Transaction) CalcFee() *big.Int{
-percentage := big.NewInt(100)
-txFee :=big.NewInt(0)
-for x:=0; x< len(tx.Debit); x+=1{
-	txFee.Add(txFee, new(big.Int).Div(tx.Debit[x].Amount, percentage))
-}
-return txFee
+	percentage := big.NewInt(500)
+	txFee :=big.NewInt(0)
+	txFee.Add(txFee, new(big.Int).Div(tx.Debit.Amount, percentage))
+	return txFee
 }
 func (tx Transaction) CalcInterest() *big.Int{
     interest  :=big.NewInt(0)
@@ -176,43 +231,60 @@ for x:=0; x< len(Tx.Credit); x+=1{
 
 func (Tx Transaction) Debits() *big.Int{
 txAmount :=big.NewInt(0)
-for x:=0; x< len(Tx.Debit); x+=1{
-	txAmount.Add(txAmount, Tx.Debit[x].Amount)
-}
+
+	txAmount.Add(txAmount, Tx.Debit.Amount)
 	return txAmount
 }
 
 
 
-func(Tx BaseTransaction) HashBaseTx(pubKey string ) crypto.Hash{
-	kh :=crypto.NewKeccakState()
-	txData := string(Tx.ChainYear) + Tx.Time.String() + Tx.Amount.String() + pubKey
-	return crypto.HashData(kh, []byte(txData))
+func(Tx BaseTransaction) HashBaseTx(pubKey string ) string{
+	//kh :=crypto.NewKeccakState()
+	txData := Tx.BaseTxData()
+	txData.OTP = pubKey
+	json,_ := json.Marshal(txData)
+
+	return crypto.HashTx([]byte(json))
 
 }
 
-func(Tx Transaction) HashTx( ) crypto.Hash{
-	kh :=crypto.NewKeccakState()
-	txData := ""
-	for x:=0; x< len(Tx.Credit); x+=1{
-		txData = string(Tx.Credit[x].TxHash) 
-		
-	}
-	for x:=0; x< len(Tx.Debit); x+=1{
-		txData = txData + string(Tx.Debit[x].TxHash) 
-		
-	}
-	txData = txData + string(Tx.Change.TxHash)
-	txData = txData + Tx.OTP
-	return crypto.HashData(kh, []byte(txData))
+func(Tx Transaction) HashTx( ) string{
+	//kh :=crypto.NewKeccakState()
+	txData := Tx.TxData()
+	json,_ := json.Marshal(txData)
+	return crypto.HashTx([]byte(json))
 
 }
 
-func(Tx Transaction) VerifySig() bool{
+
+func (Tx BaseTransaction) BaseTxData() BaseTxData{
+    var txData BaseTxData
+	
+	txData.ChainYear 		= Tx.ChainYear
+	txData.BlockNumber 		= Tx.BlockNumber
+	txData.Time				= Tx.Time
+	txData.Amount			= Tx.Amount
+	 
+	
+	return txData
+}
+
+func (Tx Transaction) TxData() TxData{
+    var txData TxData
+	
+	txData.Credit = Tx.Credit
+	fmt.Println("Tx Credit :", txData.Credit)
+	txData.Debit = Tx.Debit
+	txData.Change = Tx.Change
+	
+	return txData
+}
+
+func(Tx BaseTransaction) VerifySig() bool{
 			
 	publicKey := crypto.DecodePubKey(Tx.OTP)
-	if bytes.Compare(Tx.TxHash, Tx.HashTx()) ==0 {
-		return crypto.Verify(Tx.TxHash, Tx.R, Tx.S, publicKey) 
+	if bytes.Compare([]byte(Tx.TxHash), []byte(Tx.HashBaseTx(Tx.OTP))) ==0 {
+		return crypto.TxVerify([]byte(Tx.Spent), Tx.R, Tx.S, publicKey) 
 
 	}else{
 		return false

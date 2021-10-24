@@ -18,7 +18,7 @@ type Block struct {
 	ChainYear			uint64						//Year this block was created
 	BlockNumber			uint64						//Block Number
 	FGValue				float64						//The Value of 1 FG
-	Txs			  		[]crypto.Hash				//Array of Transaction Hashes
+	Txs			  		[]string					//Array of Transaction Hashes
 	NumTxs				uint64						//Number of Transactions Submited For this Block
 	Nodes				[]string					//This is current list of Nodes that responded to the last Block.  This array is what is used to determine Block Nodes. string is the nodes public key as a string
 	PBHash				crypto.Hash					//Hash of previous Block
@@ -73,16 +73,16 @@ func (block *Block) SaveBlock(dirname string){
      //   fmt.Println( err )
     //}
  
-	path :=filepath.Join(dirname, "fg", "chain", strconv.FormatUint(block.ChainYear, 10))
+	path :=filepath.Join(dirname, "chain", strconv.FormatUint(block.ChainYear, 10))
 	 
 	folderInfo, err := os.Stat(path)
 	if folderInfo.Name() !="" {
 			fmt.Println("")
 	}
     if os.IsNotExist(err) {
-		err := os.Mkdir(filepath.Join(dirname, "fg"), 0755)
+		err := os.Mkdir(dirname, 0755)
 		fmt.Println(err)
-        err1 := os.Mkdir(filepath.Join(dirname, "fg", "chain"), 0755)
+        err1 := os.Mkdir(filepath.Join(dirname, "chain"), 0755)
 		fmt.Println(err1)
 		err2 := os.Mkdir(path, 0755)
 		fmt.Println(err2)
@@ -95,14 +95,14 @@ func (block *Block) SaveBlock(dirname string){
 
 }
 
-func ImportBlock(chainYear uint64, blockNumber uint64) Block{
-	dirname, err := os.UserHomeDir()
+func ImportBlock(chainYear uint64, blockNumber uint64, dirname string) Block{
+	//dirname, err := os.UserHomeDir()
 	var block Block
-    if err != nil {
-        fmt.Println( err )
-    }
+    //if err != nil {
+     //   fmt.Println( err )
+    //}
     fmt.Println( dirname )
-	path :=filepath.Join(dirname, "fg", "chain", strconv.FormatUint(chainYear, 10))
+	path :=filepath.Join(dirname, "chain", strconv.FormatUint(chainYear, 10))
 
 	fileName := filepath.Join(path, strconv.FormatUint(blockNumber, 10))
 	myfile, e := os.Stat(fileName)

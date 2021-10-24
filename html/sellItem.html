@@ -1,0 +1,99 @@
+<html>
+<header>
+<title>
+FG Store List an Item
+</title>
+
+ <script src="./ipfs-min.js"></script>
+ <script src="./jquery.js"></script>
+<script>
+async function upload() {
+	// https://cloudflare-ipfs.com/ipfs/QmZ1ADUpaaTMrWisSjkX55zcJkDdKr8Z2piDttMPSHMyAE
+	const node = await Ipfs.create({ repo: 'ipfs-' + Math.random() })
+      window.node = node
+
+//ipfs QmZ1ADUpaaTMrWisSjkX55zcJkDdKr8Z2piDttMPSHMyAE  ipfs.js
+      const status = node.isOnline() ? 'online' : 'offline'
+
+      console.log(`Node status: ${status}`)
+      //document.getElementById('status').innerHTML = `Node status: ${status}`
+
+
+	   const { cid } = await node.add(document.getElementById('photo').files[0])
+	   let url = `https://ipfs.io/ipfs/`+cid
+          console.log(`Url --> ${url}`)
+          document.getElementById("url").innerHTML= cid
+          document.getElementById("url").href= url
+		  node.pin.add(cid);
+}
+
+async function input() {
+url = "http://localhost:"+window.location.port+/addItem;
+console.log("Url :", url);
+
+$.ajax({
+   type: "POST",
+   url: url,
+   data: JSON.stringify({ "title": title, "prductId" : prodId, "description" : desc }),
+   contentType: "application/json",
+   success: function (result) {
+     console.log(result);
+   },
+   error: function (result, status) {
+     console.log(result);
+   }
+});
+
+}
+
+
+
+
+</script>
+</header>
+<body>
+<H1>Welcome to the FG Store</H1>
+ <form action="#" onsubmit="upload()">
+      <fieldset>
+        <legend>Upload photo</legend>
+        <input type="file" name="photo" id="photo">
+		
+        <button type="button" id="uploadPhoto" onclick="upload()" >Upload</button><br>
+		<center>
+		<label for="title">Item Title       </label>
+		<input type="text" name="title" id="title"><br>
+		<label for="prodId">Product Category</label>
+		<input type="text" name="prodId" id="prodId"><br>
+		<label for="desc">Item Description  </label>
+		<textarea name="description" id="desc" rows="5" cols="50"></textarea><br>
+		<label for="amount">Price in USD    </label>
+		<input type="text" name="amount" id="amount"><br>
+		<label for="qty">Quantity           </label>
+		<input type="text" name="qty" id="qty"><br>
+		<label for="color">Color            </label>
+		<input type="text" name="color" id="color"><br>
+		<label for="weight">Weight          </label>
+		<input type="text" name="weight" id="weight"><br>
+		<label for="height">height          </label>
+		<input type="text" name="height" id="height"><br>
+		<label for="length">Length          </label>
+		<input type="text" name="length" id="length"><br>
+		<label for="width">Width            </label>
+		<input type="text" name="width" id="width"><br>
+		<button type="button" id="addJson" onclick="input()" >Input</button>
+		</center>
+      </fieldset>
+    </form>
+	<br>IPFS Link To Image
+		<a href='' id='url'></a><br>
+		<center>
+		Your image is now hosted on the Interplanetary File System (IPFS). However, it will disappear<br> 
+		in about 1 to 2 days unless you pin the file.  You can setup and run your own IPFS server or<br>
+		You can use this a pinning service to host your image permantely most have a free service for under 1 gb<br>
+		at Infura.io, Pinata, or Eternum<br>
+		<a href="https://infura.io/register"> Infura.io</a><br>
+		<a href="https://app.pinata.cloud/"> Pinata</a><br>
+		<a href="https://www.eternum.io/">Eternum</a><br>
+		</center>
+</body>
+</html>

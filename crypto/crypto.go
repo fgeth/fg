@@ -50,14 +50,16 @@ var (
     specialCharSet = "!@#$%&*"
     numberSet      = "0123456789"
     allCharSet     = lowerCharSet + upperCharSet + specialCharSet + numberSet
-	AddressLength = 20
+	AddressLength = 32
 )
 
 
 
 
 
-type Address [20]byte
+type Address [32]byte
+
+
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash []byte
 
@@ -87,6 +89,11 @@ func HashData(kh KeccakState, data []byte) (h Hash) {
 	return h
 }
 
+func HashTx(data []byte) (string){
+	s := fmt.Sprintf("%x", sha256.Sum256(data))
+	return s
+}
+
 type SignedTx struct {
     Accept			bool				//If node accepts this transaction or rejects the transaction
 	R				big.Int
@@ -111,9 +118,25 @@ func Verify(hash Hash, r *big.Int, s *big.Int, pubKey *ecdsa.PublicKey) bool{
 }
 
 
+func TxSign(hash []byte, prvKey *ecdsa.PrivateKey ) (*big.Int, *big.Int){
+	r, s, err := ecdsa.Sign(rand.Reader, prvKey, hash[:])
+	if err != nil {
+		fmt.Println(err)
+	}
+	return r, s
+
+}
+
+func TxVerify(hash []byte, r *big.Int, s *big.Int, pubKey *ecdsa.PublicKey) bool{
+	return ecdsa.Verify(pubKey, hash[:], r, s) 
+
+}
+
+
 // GenerateKey generates a new private key.
 func GenerateKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	key,err:= ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return key, err
 	//elliptic.P256() can do 27,000 verifications per second vs 1,700 a second with elliptic.P384()
 	//going with elliptic.P256 as each key will only be protecting $10 256 bits is good enough 
 	//for example each bitcoin wallet uses the 256 curve and each wallet stores way more than $10
@@ -166,29 +189,50 @@ for x:=0; x <8; x+=1{
 return h
 }
 
-func EncodePrv(privateKey *ecdsa.PrivateKey) (string) {
-    x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
-    pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
-	return string(pemEncoded)
-}
-func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
-    x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
-    pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+func B32HashToUint64(h []byte) (uint64, uint64, uint64, uint64){
+	data0 := []byte{h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7]}
+	data1 := []byte{h[8],h[9],h[10],h[11],h[12],h[13],h[14],h[15]}
+	data2 := []byte{h[16],h[17],h[18],h[19],h[20],h[21],h[22],h[23]}
+	data3 := []byte{h[24],h[25],h[26],h[27],h[28],h[29],h[30],h[31]}
 
-    x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
-    pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+	uintA := binary.BigEndian.Uint64(data0)
+	uintB := binary.BigEndian.Uint64(data1)
+	uintC := binary.BigEndian.Uint64(data2)
+	uintD := binary.BigEndian.Uint64(data3)
+	return uintA, uintB, uintC, uintD	
 
-    return string(pemEncoded), string(pemEncodedPub)
-}
-
-func EncodePubKey( publicKey *ecdsa.PublicKey) (string) {
-    
-    x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
-	pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
-
-    return string(pemEncodedPub)
 }
 
+func B32Uint64ToHash(uintA, uintB, uintC, uintD uint64) []byte{
+cn1 := make([]byte, 8)
+cn2 := make([]byte, 8)
+cn3 := make([]byte, 8)
+cn4 := make([]byte, 8)
+var h  []byte
+binary.BigEndian.PutUint64(cn1, uintA)
+
+binary.BigEndian.PutUint64(cn2, uintB)
+
+binary.BigEndian.PutUint64(cn3, uintC)
+binary.BigEndian.PutUint64(cn4, uintD)
+for x:=0; x <8; x+=1{
+	h[x] =cn1[x]
+
+}
+for x:=0; x <8; x+=1{
+	h[x+8] =cn2[x]
+
+}
+for x:=0; x <8; x+=1{
+	h[x+16] =cn3[x]
+
+}
+for x:=0; x <8; x+=1{
+	h[x+24] =cn4[x]
+
+}
+return h
+}
 func GetAddress( publicKey *ecdsa.PublicKey) (string){
    x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
 	a := BytesToAddress(x509EncodedPub)
@@ -234,6 +278,7 @@ func (a *Address) checksumHex() []byte {
 	return buf[:]
 }
 func (a Address) hex() []byte {
+	
 	var buf [len(a)*2 + 2]byte
 	copy(buf[:2], "0x")
 	hex.Encode(buf[2:], a[:])
@@ -246,7 +291,50 @@ func (a *Address) SetBytes(b []byte) {
 		b = b[len(b)-AddressLength:]
 	}
 	copy(a[AddressLength-len(b):], b)
+	//fmt.Println("A :", a)
 }
+
+func  UnSetBytes(a string) *ecdsa.PublicKey{
+	var b []byte
+	var c []byte
+	//var d []byte
+	for x:=2; x < len(a); x+=1{
+		c =append(c, a[x])
+	}
+	fmt.Println("a ", a)
+	fmt.Println("c ", c)
+	fmt.Println("c as string ", string(c))
+	d,_ := hex.DecodeString(string(c))
+	fmt.Println("d ", d)
+	//copy(b[:], d)
+	fmt.Println("b ", b )
+	return DecodePubKey(string(c))
+
+}
+
+func EncodePrv(privateKey *ecdsa.PrivateKey) (string) {
+    x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
+    pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	return string(pemEncoded)
+}
+func Encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (string, string) {
+    x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
+    pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+
+    x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+    pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+
+    return string(pemEncoded), string(pemEncodedPub)
+}
+
+func EncodePubKey( publicKey *ecdsa.PublicKey) (string) {
+    
+    x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+	pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+
+    return string(pemEncodedPub)
+}
+
 
 
 func DecodePubKey( pemEncodedPub string) (*ecdsa.PublicKey) {

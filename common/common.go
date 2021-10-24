@@ -2,10 +2,12 @@ package common
 
 import (
 	 "bytes"
+	 "crypto/ecdsa"
 	 "encoding/json"
 	 "fmt"
 	 "io/ioutil"
 	 "math/big"
+	 "net/http"
 	 "os"
 	 "path/filepath"
 	 "strconv"
@@ -27,22 +29,28 @@ var (
 	Tx					[]transaction.Transaction		//Last Known Verified Block Transactions
 	PBTx				[]transaction.Transaction		//Previous Block Transactions
 	BTx					[]transaction.Transaction		//Used to Store Transactions for Pending Block
-	PTx					[]crypto.Hash					//Array of Transaction Hashes for Pending Block
+	PTx					[]string						//Array of Transaction Hashes for Pending Block
 	Chain				chain.Chain						//Current Chain
 	Chains				chain.Chains					//All Past Year Chains 
 	FGValue				float64							//The Value of 1 FG
 	Active				[]node.Node						//All Known Active Nodes Next Block
-	Nodes				node.Nodes						//All known Nodes
+	TheNodes			 Nodes							//All known Nodes
 	Writers				[]string						//Array of Current Block Nodes PublicKey as string Based on Block Hash includes Leader wich is the first node listed
-	BTxHash				[]crypto.Hash					//Stores processed transaction debit hashes while Block or Leader Node
-	PBTxHash			[]crypto.Hash					//Stores previous Block Transactions to account for Transactions sent to Block Leader until block is created & used to validate transactions are in block
+	BTxHash				[]string						//Stores processed transaction debit hashes while Block or Leader Node
+	PBTxHash			[]string						//Stores previous Block Transactions to account for Transactions sent to Block Leader until block is created & used to validate transactions are in block
 	NumTx				int64							//Keeps track of number of Transactions resets at 1,000 Transactions and FGValue is bumped .01
 	TTx					[]transaction.Transaction	    //Used to Transfer Transactions To Nodes One Block at a Time	
 	Items				map[string]item.Item			//Index is Item Id
 	MyNode				node.Node
 	Mtx	 				sync.Mutex
 	Path				string							//Path to Data dirctory
+	Trusted				[]*ecdsa.PublicKey				//PublicKey of Fgeth Servers
 )
+
+type Nodes struct {
+	Node 			map[string]node.Node  				//All active and inactive Nodes.  Easy to get PublicKey using string of public key as map index 
+
+}
 
 //Increments ChainYear by one
 func IncChainYear(){
@@ -77,7 +85,7 @@ func SwapTransaction(){
 func trimPTx(){
 	Mtx.Lock()
 	if len(PTx) > 1000{
-		var tmpTx  []crypto.Hash
+		var tmpTx  []string
 		for x :=1000; x < len(PTx); x+=1{
 			tmpTx = append(tmpTx, PTx[x])
 		}
@@ -148,14 +156,14 @@ var block  block.Block
 if MyNode.Leader{
 	blockNumber:= BlockNumber + uint64(1)
 	NumTxs := uint64(len(PTx))
-	var blockTx  []crypto.Hash
+	var blockTx  []string
 	TxFees :=big.NewInt(0)
 	MultiBlock :=false
 	if NumTxs > 1000{
 		MultiBlock = true
 		for x:=0; x < 1000; x +=1{
 			blockTx = append (blockTx, PTx[x])
-			percentage := big.NewInt(100)
+			percentage := big.NewInt(500)
 			for y:=0; y< len(BTx[x].Credit); y +=1{
 				txFee := new(big.Int).Div(BTx[x].Credit[y].Amount, percentage)
 				TxFees = TxFees.Add(TxFees,txFee)
@@ -231,8 +239,8 @@ if MyNode.Leader{
 		block.NumTxs = NumTxs
 		block.Nodes = ActiveNodes
 		block.PBHash = PB.BlockHash
-		block.NodePayout = NodeTx[0].Debit[0].Amount
-		block.WriterPayout = WritersTx[0].Debit[0].Amount
+		block.NodePayout = NodeTx[0].Debit.Amount
+		block.WriterPayout = WritersTx[0].Debit.Amount
 		block.BlockHash = block.HashBlock()
 		if MultiBlock{
 			block.Writers = PB.Writers
@@ -376,7 +384,7 @@ func CheckBlock(block *block.Block) bool{
 }
 
 func ImportBlock(CB *block.Block) block.Block{
-	return block.ImportBlock(CB.ChainYear, CB.BlockNumber)
+	return block.ImportBlock(CB.ChainYear, CB.BlockNumber, MyNode.Path)
 
 }
 
@@ -439,15 +447,51 @@ func CreatePayoutTransaction(amt *big.Int, pubKey string, blockNumber uint64) tr
 	Credit.TxHash = Credit.HashBaseTx(pubKey)
 	Credit.Amount = amt
 	Tx.Change.TxHash = Tx.Change.HashBaseTx(pubKey)
-	Tx.Debit =append(Tx.Debit, Debit)
+	Tx.Debit =Debit
 	Tx.Credit = append(Tx.Credit, Credit)
-	Tx.OTP = MyNode.Id
 	Tx.TxHash = Tx.HashTx()
-	Tx.R, Tx.S = crypto.Sign(Tx.TxHash, MyNode.PrvKey)
+	Tx.Credit[0].R, Tx.Credit[0].S = crypto.TxSign([]byte(Tx.TxHash), MyNode.PrvKey)
 	Tx.Payout = true
 	return Tx
 	
 }
+
+func CreateTransaction(amt *big.Int, Credit []transaction.BaseTransaction, pubKey string, pbKey string, blockNumber uint64, PrvKeys []*ecdsa.PrivateKey) transaction.Transaction{
+
+
+	
+	var Tx transaction.Transaction
+	
+	Tx.Change.TxHash = Tx.Change.HashBaseTx(pbKey)
+	Tx.Debit = CreateDebitTxs(amt, pubKey, blockNumber)
+	for x:=0; x < len(Credit); x+=1{
+		Tx.Credit = append(Tx.Credit, Credit[x])
+	}
+	fmt.Println("TxHash :", Tx.HashTx())
+	Tx.TxHash = Tx.HashTx()
+	Tx.Debit.TxId = Tx.TxHash
+	for x:=0; x < len(Tx.Credit); x +=1{
+		pubKey = crypto.EncodePubKey(&PrvKeys[x].PublicKey)
+		Tx.Credit[x].R, Tx.Credit[x].S = crypto.TxSign([]byte(Tx.TxHash), PrvKeys[x])
+		Tx.Credit[x].OTP = pubKey
+		Tx.Credit[x].Spent = Tx.TxHash
+	}
+	Tx.Payout = true
+	return Tx
+	
+}
+
+func CreateDebitTxs(amt *big.Int, pubKey string, blockNumber uint64) transaction.BaseTransaction{
+	var Debit transaction.BaseTransaction
+	Debit.Amount = amt
+	Debit.ChainYear = ChainYear
+	Debit.BlockNumber = blockNumber
+	Debit.Time = time.Now()
+	Debit.TxHash = Debit.HashBaseTx(pubKey)
+	fmt.Println("Debit.HashBaseTx :", Debit.HashBaseTx(pubKey))
+	return Debit
+}
+
 func SellItem(item item.Item) {
 	//prvKey := crypto.GenerateRSAKey()
 	//MyNode.Comms.RsaPrvKeys[prvKey.PublicKey] = prvKey
@@ -459,12 +503,12 @@ func SellItem(item item.Item) {
 
 //TODO Fix To Where this imports the blocks
 func ImportBlocks() {
-	dirname, err := os.UserHomeDir()
-    if err != nil {
-        fmt.Println( err )
-    }
-    fmt.Println( dirname )
-	path :=filepath.Join(dirname, "fg", "chain", strconv.FormatUint(ChainYear, 10))
+	//dirname, err := os.UserHomeDir()
+    //if err != nil {
+     //   fmt.Println( err )
+    //}
+   // fmt.Println( dirname )
+	path :=filepath.Join(MyNode.Path, "chain", strconv.FormatUint(ChainYear, 10))
 
 	fileName := filepath.Join(path, strconv.FormatUint(BlockNumber, 10))
 	file, _ := ioutil.ReadFile(fileName)
@@ -492,52 +536,50 @@ txFee := Tx.CalcFee()
 if FGValue >=100{
 	txInterest = Tx.CalcInterest()
 }
-
-if Tx.OTP !=""{
-		if Tx.VerifySig(){
-			TC := Tx.Credits()
-			TD := Tx.Debits()
-			if TC.Add(TC,txInterest) == txFee.Add(txFee, TD.Add(TD, Tx.Change.Amount)){
-			for x:=0; x< len(Tx.Credit); x+=1{
-				cTx := transaction.ImportBaseTx(Tx.Credit[x].TxHash)
-				if cTx.OTP ==""{
-					cTx.OTP=Tx.Credit[x].OTP
-					cTx.SaveTx()
-					
-				}else{
-					return false		//Double Spend
-				}
-			}
-			for x:=0; x< len(Tx.Debit); x+=1{
-				Tx.Debit[x].SaveTx()
-
-			}
-				Tx.Change.SaveTx()
-			}else{
-					return false
-			}
-		}else{
-			return false
-		}
-}else{
-	if Tx.Payout == true{
-		if Tx.VerifySig(){
-			block := block.ImportBlock(Tx.Credit[0].ChainYear , Tx.Credit[0].BlockNumber)
-			for x:=0; x<len(block.Writers); x +=1{
-				if block.Writers[x] == Tx.OTP{
-					if Tx.Debit[0].Amount == block.NodePayout{
+if Tx.Payout == true{
+			if Tx.Credit[0].VerifySig(){
+				block := block.ImportBlock(Tx.Credit[0].ChainYear , Tx.Credit[0].BlockNumber, MyNode.Path)
+				for x:=0; x<len(block.Writers); x +=1{
+					if block.Writers[x] == Tx.Credit[0].OTP{
+						if Tx.Debit.Amount == block.NodePayout{
+								return true
+							}
+						if Tx.Debit.Amount == block.WriterPayout{
 							return true
 						}
-					if Tx.Debit[0].Amount == block.WriterPayout{
-						return true
 					}
 				}
 			}
+		
 		}
-	
-	}
-	return false
-}
+
+				TC := Tx.Credits()
+				TD := Tx.Debit.Amount
+				ValidCredit :=0
+				if TC.Add(TC,txInterest) == txFee.Add(txFee, TD.Add(TD, Tx.Change.Amount)){
+				for x:=0; x< len(Tx.Credit); x+=1{
+					cTx := transaction.ImportBaseTx([]byte(Tx.Credit[x].TxHash), MyNode.Path)
+					if cTx.OTP ==""{
+						cTx.OTP=Tx.Credit[x].OTP
+						if cTx.VerifySig(){
+							cTx.SaveTx(MyNode.Path)
+							ValidCredit +=1
+						}else{
+							return false  //not signed
+						}
+						
+					}else{
+						return false		//Double Spend
+					}
+				}
+				if ValidCredit >= len(Tx.Credit){
+					Tx.Debit.SaveTx(MyNode.Path)
+					Tx.Change.SaveTx(MyNode.Path)
+					return true
+				}
+				
+					
+			}
 return false
 }
 
@@ -545,10 +587,10 @@ return false
 
 //TODO fix where this imports the transactions
 func ImportTxs() {
-	dirname, err := os.UserHomeDir()
-    if err != nil {
-        fmt.Println( err )
-    }
+	//dirname, err := os.UserHomeDir()
+    //if err != nil {
+    //   fmt.Println( err )
+    //}
 	var txHash crypto.Hash
 	uintA, uintB, uintC, uintD := crypto.HashToUint64(txHash)
 	h1 := strconv.FormatUint(uintA, 10)
@@ -556,7 +598,7 @@ func ImportTxs() {
 	h3 := strconv.FormatUint(uintC, 10)
 	h4 := strconv.FormatUint(uintD, 10)
 	theHash := h1 + h2 +h3 +h4
-	path :=filepath.Join(dirname, "fg", "tx", theHash )
+	path :=filepath.Join(MyNode.Path, "tx", theHash )
 	file, _ := ioutil.ReadFile(path)
 	var tx transaction.Transaction
 	_ = json.Unmarshal([]byte(file), &tx)
@@ -608,4 +650,72 @@ func genRsa() {
  fmt.Println("Message =", clearText3)
 
 
+}
+
+func SendTransaction(tx transaction.Transaction) bool{
+	blockNodes := SelectNode(tx)
+	for x :=0; x<len(blockNodes); x+=1{
+		if SubmitTransaction(tx, Writers[blockNodes[x]]){
+			return true
+		}
+	}
+	return false
+}
+
+
+func SubmitTransaction(tx transaction.Transaction, writer string) bool{
+	json, _:= json.Marshal(tx)
+	 if node, ok :=TheNodes.Node[writer]; ok{
+		call := "sendTx"
+		//call = block, node, tx, or account
+		url := fmt.Sprintf("http://%i:%p/%t", node.Ip, node.Port, call)
+		
+		resp, err := http.Post(url, "application/json", bytes.NewBuffer(json))
+
+		if err != nil {
+		  // handle error and try next node
+		  return false
+		}
+		fmt.Println(resp)
+		return true
+	}
+	return false
+
+}
+
+func SelectNode(tx transaction.Transaction) []uint64{
+
+	kh :=crypto.NewKeccakState()
+	txData := tx.TxData()
+	txhash := crypto.HashData(kh, []byte(fmt.Sprintf("%v", txData)))
+	uintA, uintB, uintC, uintD :=crypto.HashToUint64(txhash)
+		var blockNode []uint64
+		tmp := uint64(0)
+		bn := uint64(0)
+		numNodes := uint64(len(Writers))
+		for x :=uint64(0); x < numNodes; x +=1{
+				switch x%4{
+					case  1:
+						tmp = (uintA % numNodes)+x
+						
+							
+					case 2:
+						tmp = (uintB % numNodes)+x
+					
+					case 3:
+						tmp = (uintC % numNodes)+x
+					
+					case 4:
+						tmp = (uintD % numNodes)+x
+		
+				}	
+					if tmp > numNodes{
+						bn = tmp - numNodes
+					}else{
+						bn = tmp
+					}
+					blockNode  = append(blockNode, (bn))
+				
+			}
+	return blockNode
 }
