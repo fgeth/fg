@@ -13,6 +13,7 @@ import(
 	"os"
 	"os/signal"
 	"path/filepath"
+	//"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -20,6 +21,7 @@ import(
 	"github.com/fgeth/fg/block"
 	"github.com/fgeth/fg/common"
 	"github.com/fgeth/fg/crypto"
+	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
 )
@@ -71,9 +73,10 @@ func main(){
 	fmt.Println("Node Ip is :" , common.MyNode.Ip)
 	fmt.Println("Node Path is :" , common.MyNode.Path)
 	test()
-
+	
 	if *Gen{
 		fmt.Println("Genesis Block")
+		common.FGValue = .01
 		//common.ImportBlocks()
 		//common.ImportTxs()
 		common.SignGenesisBlocks() 
@@ -127,6 +130,7 @@ func test(){
 	tx1.SaveTx(common.MyNode.Path)
 	add := crypto.BytesToAddress([]byte(tx1.TxHash))
 	fmt.Println("Address :", add)
+	common.FGValue = .01
 
 }
 func directory(){
@@ -184,6 +188,7 @@ func server(){
 	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
 	//r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
 	r.HandleFunc("/block", createNewBlock).Methods("POST")
+	r.HandleFunc("/addItem", createNewItem).Methods("POST")
 	//r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
 	http.Handle("/", r)
@@ -237,6 +242,101 @@ func createNewBlock(w http.ResponseWriter, r *http.Request) {
 		
 		json.NewEncoder(w).Encode(block)
 	}
+}
+
+
+func createNewItem(w http.ResponseWriter, r *http.Request) {
+	reqBody, _ := ioutil.ReadAll(r.Body)
+    var theItem item.Item
+	aHash := crypto.HashTx(reqBody)
+	fmt.Println("aHash", aHash)
+	//fmt.Println("Item", reqBody)
+    json.Unmarshal(reqBody, &theItem)
+	// _, _, _, uintD :=crypto.B32HashToUint64(aHash)
+	// item.Id =  strconv.FormatUint(uintD, 10)
+	theItem.Id = aHash
+	fmt.Println("Amount", theItem.Amount)
+	common.MyNode.Items.Item = map[string]item.Item{theItem.Id: theItem}
+	common.MyNode.Items.Tx = map[string][]transaction.BaseTransaction{theItem.Id: createDebitTx(theItem.Amount, theItem)}
+	theItem.SaveItem(common.MyNode.Path)
+	fmt.Println("New Item")
+	fmt.Println("Title ", theItem.Title)
+	fmt.Println("Num Debit Tx ", len(common.MyNode.Items.Tx[theItem.Id]))
+	for x :=0; x < len(common.MyNode.Items.Tx[theItem.Id]); x +=1{
+			fmt.Println("Debit Amount", common.MyNode.Items.Tx[theItem.Id][x].Amount)
+			fmt.Println("Debit OTP", common.MyNode.Items.Tx[theItem.Id][x].OTP)
+	}
+	json.NewEncoder(w).Encode(theItem)
+
+}
+
+func createDebitTx(amt float64, item item.Item)[]transaction.BaseTransaction{
+	var txs []transaction.BaseTransaction
+	var Debit transaction.BaseTransaction
+	var PrvKeys []*ecdsa.PrivateKey
+	var total float64
+	
+	
+	if amt >100{
+		numTx := int(amt)/100
+		fmt.Println("Num Tx: =", numTx)
+		for x :=0; x < numTx; x+=1{
+			Debit.ChainYear = common.ChainYear
+			Debit.BlockNumber = common.BlockNumber
+			Debit.Time = time.Now()
+			Debit.Amount = common.USD2FG(float64(100))
+			total += float64(100)
+			PrvKey, _ := crypto.GenerateKey()
+			PubKey := &PrvKey.PublicKey
+			PrvKeys = append(PrvKeys, PrvKey)
+			Debit.OTP = crypto.EncodePubKey(PubKey)
+			
+			txs = append(txs, Debit)
+		}
+		leftOver := amt -total
+		if leftOver > 0{
+			Debit.ChainYear = common.ChainYear
+			Debit.BlockNumber = common.BlockNumber
+			Debit.Time = time.Now()
+			Debit.Amount = common.USD2FG(leftOver)
+			PrvKey, _ := crypto.GenerateKey()
+			PubKey := &PrvKey.PublicKey
+			PrvKeys = append(PrvKeys, PrvKey)
+			Debit.OTP = crypto.EncodePubKey(PubKey)
+			txs = append(txs, Debit)
+		}
+		
+	}else{
+		numTx := int(amt)/10
+		for x :=0; x < numTx; x+=1{
+			Debit.ChainYear = common.ChainYear
+			Debit.BlockNumber = common.BlockNumber
+			Debit.Time = time.Now()
+			Debit.Amount = common.USD2FG(10)
+			total += float64(10)
+			PrvKey, _ := crypto.GenerateKey()
+			PubKey := &PrvKey.PublicKey
+			PrvKeys = append(PrvKeys, PrvKey)
+			Debit.OTP = crypto.EncodePubKey(PubKey)
+			txs = append(txs, Debit)
+		}
+		leftOver := amt -total
+		if leftOver > 0{
+			Debit.ChainYear = common.ChainYear
+			Debit.BlockNumber = common.BlockNumber
+			Debit.Time = time.Now()
+			Debit.Amount = common.USD2FG(leftOver)
+			PrvKey, _ := crypto.GenerateKey()
+			PubKey := &PrvKey.PublicKey
+			PrvKeys = append(PrvKeys, PrvKey)
+			Debit.OTP = crypto.EncodePubKey(PubKey)
+			txs = append(txs, Debit)
+		}
+	}
+	fmt.Println("Number of Txs:=", len(txs))
+	common.MyNode.Items.Keys = map[string][]*ecdsa.PrivateKey{item.Id: PrvKeys}
+	
+	return txs
 }
 
 //TODO Fix this

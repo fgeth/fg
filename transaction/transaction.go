@@ -54,6 +54,9 @@ type TxData struct{
 	
 
 }
+
+
+
 func (tx *BaseTransaction) SaveTx(dirname string){
     //dirname, err := os.UserHomeDir()
     //if err != nil {

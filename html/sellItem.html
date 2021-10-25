@@ -28,16 +28,39 @@ async function upload() {
 }
 
 async function input() {
-url = "http://localhost:"+window.location.port+/addItem;
+url = "http://localhost:"+window.location.port+"/addItem";
 console.log("Url :", url);
-
+ var title = document.getElementById("title").value;
+ var prodId = document.getElementById("prodId").value;
+ console.log("prodId :", prodId);
+ var desc = document.getElementById("desc").value;
+ var amount =parseFloat( document.getElementById("amount").value);
+ console.log("Amount :", amount);
+ var qty = parseInt(document.getElementById("qty").value);
+ var color = $("[id*=color]");
+ var w1Uint = $("[id*=w1Uint]");
+ var weight = parseFloat(document.getElementById("weight").value);
+ var hUint = $("[id*=hUint]");
+ var height = parseFloat(document.getElementById("height").value);
+ var lUint = $("[id*=lUint]");
+ var length = parseFloat(document.getElementById("length").value);
+ var w2Uint = $("[id*=w2Uint]");
+ var width = parseFloat(document.getElementById("width").value);
+ console.log("title :", title);
 $.ajax({
    type: "POST",
    url: url,
-   data: JSON.stringify({ "title": title, "prductId" : prodId, "description" : desc }),
+   data: JSON.stringify({ "Title": title, "ProductId" : prodId, "Description" : desc, "Amount" : amount, "Qty" : qty, "Color" : color, "Weight" :{"Uint": w1Uint, "Amt":weight } , "Height" : {"Uint": hUint, "Amt":height }, "Length" : {"Uint": lUint, "Amt":length }, "Width" : {"Uint": w2Uint, "Amt":width } }),
    contentType: "application/json",
    success: function (result) {
-     console.log(result);
+     
+	 document.getElementById("results").innerHTML =" Item Added"
+	 var item = JSON.parse(result);
+	 console.log(result);
+	 console.log("More Stuff")
+	 console.log ("Item ID :=", item.Id)
+	 console.log ("Item Amount :=", item.Amount)
+	 
    },
    error: function (result, status) {
      console.log(result);
@@ -71,14 +94,54 @@ $.ajax({
 		<label for="qty">Quantity           </label>
 		<input type="text" name="qty" id="qty"><br>
 		<label for="color">Color            </label>
-		<input type="text" name="color" id="color"><br>
+		<select name="color">
+			<option value="white">White</option>
+			<option value="black">Black</option>
+			<option value="brown">Brown</option>
+			<option value="red">Red</option>
+			<option value="purple">Purple </option>
+			<option value="yellow">Yellow </option>
+			<option value="orange">Orange </option>
+		</select>
 		<label for="weight">Weight          </label>
+		<select name="w1Uint">
+			<option value="oz">Ounces</option>
+			<option value="lbs">Pounds </option>
+			<option value="kg">Kilograms </option>
+			<option value="mg">Milligram </option>
+			<option value="g">Grams </option>
+			<option value="mt">Metric Ton </option>
+		</select>
 		<input type="text" name="weight" id="weight"><br>
 		<label for="height">height          </label>
+		<select name="hUint">
+			<option value="in">Inches</option>
+			<option value="feet">Feet </option>
+			<option value="y">Yards </option>
+			<option value="mm">Millimeters</option>
+			<option value="cm">Centimeters</option>
+			<option value="m">Meters </option>
+		</select>
 		<input type="text" name="height" id="height"><br>
 		<label for="length">Length          </label>
+		<select name="lUint">
+			<option value="in">Inches</option>
+			<option value="feet">Feet </option>
+			<option value="y">Yards </option>
+			<option value="mm">Millimeters</option>
+			<option value="cm">Centimeters</option>
+			<option value="m">Meters </option>
+		</select>
 		<input type="text" name="length" id="length"><br>
 		<label for="width">Width            </label>
+		<select name="w2Uint">
+			<option value="in">Inches</option>
+			<option value="feet">Feet </option>
+			<option value="y">Yards </option>
+			<option value="mm">Millimeters</option>
+			<option value="cm">Centimeters</option>
+			<option value="m">Meters </option>
+		</select>
 		<input type="text" name="width" id="width"><br>
 		<button type="button" id="addJson" onclick="input()" >Input</button>
 		</center>
@@ -86,6 +149,7 @@ $.ajax({
     </form>
 	<br>IPFS Link To Image
 		<a href='' id='url'></a><br>
+		<div id="results"></div><br>
 		<center>
 		Your image is now hosted on the Interplanetary File System (IPFS). However, it will disappear<br> 
 		in about 1 to 2 days unless you pin the file.  You can setup and run your own IPFS server or<br>

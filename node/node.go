@@ -29,7 +29,7 @@ type Node struct {
 	Leader			bool							//True if the current Block Leader
 	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
 	//Comms			Comm							//Node RSA Keys
-	//Items			Selling							//Items that are for sell
+	Items			Selling							//Items that are for sell
 	
 }
 
@@ -44,7 +44,7 @@ type SNode struct {
 	Leader			bool							//True if the current Block Leader
 	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
 	//Comms			Comm							//Node RSA Keys
-	//Items			Selling							//Items that are for sell
+	Items			Selling							//Items that are for sell
 	
 }
 
@@ -60,8 +60,9 @@ type Comm struct{
 }
 
 type Selling struct {
-	Item			[]item.Item							//Array of Items
-	Tx				transaction.Transaction				//Tranaction shell just has the Debit BaseTransactions
+	Item			map[string]item.Item								 //Index of Item Id and the Item
+	Tx				map[string][]transaction.BaseTransaction			//Index is Item Id and array of Debit transactions 
+	Keys			map[string][]*ecdsa.PrivateKey						//Index is Item Id and array of private keys for the transaction
 	
 }
 func (node *Node) SNode() SNode{
@@ -181,7 +182,9 @@ func ImportNode(dirname string) Node{
 	//fmt.Println("Pub Key Str",  node.PKStr)
 	//fmt.Println("Private Key Str",  node.PRKStr)
 	//fmt.Println("Node.Id ", node.Id)
-	node.PrvKey, node.PubKey  = crypto.Decode(node.PRKStr, node.PKStr)
+	if node.PRKStr !=""{
+		node.PrvKey, node.PubKey  = crypto.Decode(node.PRKStr, node.PKStr)
+		}
 	return node
 	
 }
