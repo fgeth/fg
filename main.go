@@ -24,6 +24,7 @@ import(
 	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
+
 )
 var (
 
@@ -131,6 +132,9 @@ func test(){
 	add := crypto.BytesToAddress([]byte(tx1.TxHash))
 	fmt.Println("Address :", add)
 	common.FGValue = .01
+	common.Wallet.FGs = common.Wei2FG(BlockReward)
+	common.Wallet.Wei = BlockReward
+	common.Wallet.Dollars = common.FG2USD(BlockReward)
 
 }
 func directory(){
@@ -185,6 +189,8 @@ func server(){
 	//r.HandleFunc("/getBlocks", sendBlocks).Methods("GET")
 	//r.HandleFunc("/getNodes", sendNodes).Methods("GET")
 	//r.HandleFunc("/getTxs", sendTxs).Methods("GET")
+	r.HandleFunc("/getWallet", GetWallet).Methods("GET")
+	
 	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
 	//r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
 	r.HandleFunc("/block", createNewBlock).Methods("POST")
@@ -256,15 +262,15 @@ func createNewItem(w http.ResponseWriter, r *http.Request) {
 	// item.Id =  strconv.FormatUint(uintD, 10)
 	theItem.Id = aHash
 	fmt.Println("Amount", theItem.Amount)
-	common.MyNode.Items.Item = map[string]item.Item{theItem.Id: theItem}
-	common.MyNode.Items.Tx = map[string][]transaction.BaseTransaction{theItem.Id: createDebitTx(theItem.Amount, theItem)}
+	common.Wallet.Items.Item = map[string]item.Item{theItem.Id: theItem}
+	common.Wallet.Items.Tx = map[string][]transaction.BaseTransaction{theItem.Id: createDebitTx(theItem.Amount, theItem)}
 	theItem.SaveItem(common.MyNode.Path)
 	fmt.Println("New Item")
 	fmt.Println("Title ", theItem.Title)
-	fmt.Println("Num Debit Tx ", len(common.MyNode.Items.Tx[theItem.Id]))
-	for x :=0; x < len(common.MyNode.Items.Tx[theItem.Id]); x +=1{
-			fmt.Println("Debit Amount", common.MyNode.Items.Tx[theItem.Id][x].Amount)
-			fmt.Println("Debit OTP", common.MyNode.Items.Tx[theItem.Id][x].OTP)
+	fmt.Println("Num Debit Tx ", len(common.Wallet.Items.Tx[theItem.Id]))
+	for x :=0; x < len(common.Wallet.Items.Tx[theItem.Id]); x +=1{
+			fmt.Println("Debit Amount", common.Wallet.Items.Tx[theItem.Id][x].Amount)
+			fmt.Println("Debit OTP", common.Wallet.Items.Tx[theItem.Id][x].OTP)
 	}
 	json.NewEncoder(w).Encode(theItem)
 
@@ -334,9 +340,15 @@ func createDebitTx(amt float64, item item.Item)[]transaction.BaseTransaction{
 		}
 	}
 	fmt.Println("Number of Txs:=", len(txs))
-	common.MyNode.Items.Keys = map[string][]*ecdsa.PrivateKey{item.Id: PrvKeys}
+	common.Wallet.Items.Keys = map[string][]*ecdsa.PrivateKey{item.Id: PrvKeys}
 	
 	return txs
+}
+
+func GetWallet(w http.ResponseWriter, r *http.Request){
+	common.Wallet.FGValue = common.FGValue
+
+	json.NewEncoder(w).Encode(common.Wallet)
 }
 
 //TODO Fix this
@@ -453,6 +465,15 @@ func verifyTx(OTP string, Tx transaction.Transaction) transaction.Transaction{
 
 		if bytes.Compare([]byte(Tx.TxHash), []byte(Tx.HashTx())) ==0 {
 			if Tx.Payout == false{
+				x:=0;
+				for _,V :=range common.Wallet.Items.Keys{
+					pubKey := crypto.EncodePubKey(&V[x].PublicKey)
+					if pubKey == Tx.Debit.OTP{
+						common.Wallet.Debits.Debit = map[string]transaction.BaseTransaction{Tx.Debit.TxHash: Tx.Debit}
+						common.Wallet.FGs += common.Wei2FG(Tx.Debit.Amount)
+					}
+					x +=1
+				}
 				return Tx
 				}
 			}

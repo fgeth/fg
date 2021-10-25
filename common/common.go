@@ -19,6 +19,7 @@ import (
 	 "github.com/fgeth/fg/item"
 	 "github.com/fgeth/fg/node"
 	 "github.com/fgeth/fg/transaction"
+	 "github.com/fgeth/fg/wallet"
 )
 
 var (
@@ -45,6 +46,7 @@ var (
 	Mtx	 				sync.Mutex
 	Path				string							//Path to Data dirctory
 	Trusted				[]*ecdsa.PublicKey				//PublicKey of Fgeth Servers
+	Wallet				wallet.Wallet
 )
 
 type Nodes struct {
@@ -123,12 +125,27 @@ func FG2USD(amount *big.Int) float64{
 	f = f.Quo(f, t)
 
 	fv, _:= f.Float64()
-	
 	usd :=   FGValue * fv
 	return usd
 	
 	
 }
+
+func Wei2FG(amount *big.Int) float64{
+    fg := new(big.Int)
+	fg.SetString("1000000000000000000", 10)
+
+	f := new(big.Float).SetInt(amount)
+	t := new(big.Float).SetInt(fg)
+	f = f.Quo(f, t)
+
+	fv, _:= f.Float64()
+	
+	return fv
+	
+	
+}
+
 
 func USD2FG(amount float64) *big.Int{
 	

@@ -11,8 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"github.com/fgeth/fg/crypto"
-	"github.com/fgeth/fg/item"
-	"github.com/fgeth/fg/transaction"
+
 
 )
 
@@ -29,7 +28,7 @@ type Node struct {
 	Leader			bool							//True if the current Block Leader
 	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
 	//Comms			Comm							//Node RSA Keys
-	Items			Selling							//Items that are for sell
+	
 	
 }
 
@@ -44,7 +43,7 @@ type SNode struct {
 	Leader			bool							//True if the current Block Leader
 	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
 	//Comms			Comm							//Node RSA Keys
-	Items			Selling							//Items that are for sell
+	
 	
 }
 
@@ -59,12 +58,6 @@ type Comm struct{
 	
 }
 
-type Selling struct {
-	Item			map[string]item.Item								 //Index of Item Id and the Item
-	Tx				map[string][]transaction.BaseTransaction			//Index is Item Id and array of Debit transactions 
-	Keys			map[string][]*ecdsa.PrivateKey						//Index is Item Id and array of private keys for the transaction
-	
-}
 func (node *Node) SNode() SNode{
 	var snode SNode
 		snode.Id =node.Id
