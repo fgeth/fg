@@ -8,6 +8,7 @@ import(
 	"os"
 	"path/filepath"
 	"github.com/fgeth/fg/crypto"
+	"github.com/fgeth/fg/transaction"
 
 )
 
@@ -26,6 +27,7 @@ type Item struct {
 	Height				Size
 	Length				Size
 	Width				Size
+	Tx					TX		//Index is Item Id and array of Debit transactions 
 	Seller				rsa.PublicKey
 	Buyer				rsa.PublicKey
 }
@@ -42,12 +44,15 @@ type Size struct {
 
 }
 
+type TX struct{
+Tx	map[string][]transaction.BaseTransaction
+}
 
 
-func CreateItem(id string, productId string, title string, description string, amount float64, qty uint32, color string, weight Weight, height Size,length Size, width Size, seller rsa.PublicKey) Item{
+func CreateItem(id string, productId string, title string, description string, amount float64, qty uint32, color string, weight Weight, height Size,length Size, width Size, tx TX, seller rsa.PublicKey) Item{
 	
 	
-	return Item{id,productId,title,description,amount,qty,color,weight,height,length,width,seller,seller}
+	return Item{id,productId,title,description,amount,qty,color,weight,height,length,width,tx, seller,seller}
 
 }
 

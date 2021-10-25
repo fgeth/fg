@@ -22,7 +22,6 @@ type Wallet struct {
 
 type Selling struct {
 	Item			map[string]item.Item								 //Index of Item Id and the Item
-	Tx				map[string][]transaction.BaseTransaction			//Index is Item Id and array of Debit transactions 
 	Keys			map[string][]*ecdsa.PrivateKey						//Index is Item Id and array of private keys for the transaction
 	
 }

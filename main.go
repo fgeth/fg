@@ -263,14 +263,14 @@ func createNewItem(w http.ResponseWriter, r *http.Request) {
 	theItem.Id = aHash
 	fmt.Println("Amount", theItem.Amount)
 	common.Wallet.Items.Item = map[string]item.Item{theItem.Id: theItem}
-	common.Wallet.Items.Tx = map[string][]transaction.BaseTransaction{theItem.Id: createDebitTx(theItem.Amount, theItem)}
+	theItem.Tx.Tx = map[string][]transaction.BaseTransaction{theItem.Id: createDebitTx(theItem.Amount, theItem)}
 	theItem.SaveItem(common.MyNode.Path)
 	fmt.Println("New Item")
 	fmt.Println("Title ", theItem.Title)
-	fmt.Println("Num Debit Tx ", len(common.Wallet.Items.Tx[theItem.Id]))
-	for x :=0; x < len(common.Wallet.Items.Tx[theItem.Id]); x +=1{
-			fmt.Println("Debit Amount", common.Wallet.Items.Tx[theItem.Id][x].Amount)
-			fmt.Println("Debit OTP", common.Wallet.Items.Tx[theItem.Id][x].OTP)
+	fmt.Println("Num Debit Tx ", len(theItem.Tx.Tx[theItem.Id]))
+	for x :=0; x < len(theItem.Tx.Tx[theItem.Id]); x +=1{
+			fmt.Println("Debit Amount", theItem.Tx.Tx[theItem.Id][x].Amount)
+			fmt.Println("Debit OTP", theItem.Tx.Tx[theItem.Id][x].OTP)
 	}
 	json.NewEncoder(w).Encode(theItem)
 
