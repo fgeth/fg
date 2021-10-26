@@ -10,6 +10,7 @@ import(
 	"io/ioutil"
 	"log"
 	"math/big"
+	//"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,6 +27,7 @@ import(
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
 	"github.com/cretz/bine/tor"
+	//"github.com/wybiral/torgo"
 
 )
 var (
@@ -92,9 +94,11 @@ func main(){
 		//common.GetTxs()
 	}
 	wg.Add(1)
+	//go server()
 	torServer()
-	time.Sleep(time.Second * 120)
-	server()
+	//TorService()
+	//time.Sleep(time.Second * 120)
+	
 	go fg()
 	go CloseHandler()
 	wg.Wait()
@@ -206,7 +210,7 @@ func server(){
 	r.HandleFunc("/addItem", createNewItem).Methods("POST")
 	//r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
-	http.Handle("/", r)
+	//http.Handle("/", r)
 	
 	
 	staticFileDirectory := http.Dir(path)
@@ -226,18 +230,27 @@ func torServer() error {
 	// Start tor with default config (can set start conf's DebugWriter to os.Stdout for debug logs)
 	fmt.Println("Starting and registering onion service, please wait a couple of minutes...")
 	t, err := tor.Start(nil, nil)
+	r := mux.NewRouter()
 	if err != nil {
 		return err
 	}
 	defer t.Close()
 	// Add a handler
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, Dark World!"))
 	})
+	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
+	r.HandleFunc("/block", createNewBlock).Methods("POST")
+	r.HandleFunc("/addItem", createNewItem).Methods("POST")
+	staticFileDirectory := http.Dir(path)
+	
+	staticFileHandler := http.StripPrefix("/store/", http.FileServer(staticFileDirectory))
+	
+	r.PathPrefix("/store/").Handler(staticFileHandler).Methods("GET")
 	// Wait at most a few minutes to publish the service
 	listenCtx, listenCancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer listenCancel()
-	// Create an onion service to listen on 42069 but show as 80
+	// Create an onion service to listen on 42069 but show as 420
 	port, _ := strconv.Atoi(common.MyNode.Port)
 	onion, err := t.Listen(listenCtx, &tor.ListenConf{LocalPort: port , RemotePorts: []int{80}, Version3: true})
 	if err != nil {
@@ -251,6 +264,7 @@ func torServer() error {
 	return http.Serve(onion, nil)
 	
 }
+
 
 //Function to check that new blocks are being made and if not start the process
 func fg(){
