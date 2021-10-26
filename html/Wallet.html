@@ -15,12 +15,14 @@ $.get(url, function(data, status){
 	document.getElementById("Dollars").innerHTML= wallet.Dollars
 	document.getElementById("FGValue").innerHTML= wallet.FGValue
 	
-	console.log("Item ", wallet.Items.Item)
-		for (const [key, value] of wallet.Items.Item.entries()) { //line 11
-			console.log(`${key} = ${value.name}`);
-		}
+	debitFGs = 0
+		for (let Item of Object.keys(wallet.Items.Item)) {
+			var Tx = wallet.Items.Item[Item];
+			console.log(Item, Tx);
+				debitFGs = debitFGs + Tx.Amount
+			}
 	
-	document.getElementById("pending").innerHTML= debitFGs
+	document.getElementById("Pending").innerHTML= debitFGs
   });
 </script>
 </header>
@@ -38,7 +40,7 @@ $.get(url, function(data, status){
 		<div id="Dollars"></div>
 		<label for="FGValue">Value of 1 FG       </label>
 		<div id="FGValue"></div>
-		<label for="Pending">PEnding FGs for Items Being Sold       </label>
+		<label for="Pending">Pending Amount for Items Being Sold       </label>
 		<div id="Pending"></div>
 		
       </fieldset>
