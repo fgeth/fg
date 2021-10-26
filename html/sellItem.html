@@ -28,7 +28,8 @@ async function upload() {
 }
 
 async function input() {
-url = "http://localhost:"+window.location.port+"/addItem";
+//url = "http://localhost:"+window.location.port+"/addItem";
+url =  window.location.protocol + "//" + window.location.host+"/addItem";
 console.log("Url :", url);
  var title = document.getElementById("title").value;
  var prodId = document.getElementById("prodId").value;

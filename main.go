@@ -2,6 +2,7 @@ package main
 
 import(
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"flag"
@@ -13,7 +14,7 @@ import(
 	"os"
 	"os/signal"
 	"path/filepath"
-	//"strconv"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -24,6 +25,7 @@ import(
 	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
+	"github.com/cretz/bine/tor"
 
 )
 var (
@@ -90,7 +92,8 @@ func main(){
 		//common.GetTxs()
 	}
 	wg.Add(1)
-
+	torServer()
+	time.Sleep(time.Second * 120)
 	server()
 	go fg()
 	go CloseHandler()
@@ -212,11 +215,41 @@ func server(){
 	
 	r.PathPrefix("/store/").Handler(staticFileHandler).Methods("GET")
 	
-	fmt.Println("Listening on port :", common.MyNode.Port)
-if err := http.ListenAndServe(common.MyNode.Port, nil); err != nil {
+	fmt.Println("Listening on port :", 80)
+if err := http.ListenAndServe(":80", nil); err != nil {
 	    	log.Fatal(err)
 	   }
 	   
+}
+
+func torServer() error {
+	// Start tor with default config (can set start conf's DebugWriter to os.Stdout for debug logs)
+	fmt.Println("Starting and registering onion service, please wait a couple of minutes...")
+	t, err := tor.Start(nil, nil)
+	if err != nil {
+		return err
+	}
+	defer t.Close()
+	// Add a handler
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hello, Dark World!"))
+	})
+	// Wait at most a few minutes to publish the service
+	listenCtx, listenCancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer listenCancel()
+	// Create an onion service to listen on 42069 but show as 80
+	port, _ := strconv.Atoi(common.MyNode.Port)
+	onion, err := t.Listen(listenCtx, &tor.ListenConf{LocalPort: port , RemotePorts: []int{80}, Version3: true})
+	if err != nil {
+		return err
+	}
+	defer onion.Close()
+	// Serve on HTTP
+	fmt.Printf("Listening on port :", common.MyNode.Port)
+	fmt.Printf("Open Tor browser and navigate to http://%v.onion\n", onion.ID)
+	common.MyNode.Ip = onion.ID
+	return http.Serve(onion, nil)
+	
 }
 
 //Function to check that new blocks are being made and if not start the process
