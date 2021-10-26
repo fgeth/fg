@@ -14,6 +14,13 @@ $.get(url, function(data, status){
 	document.getElementById("WEIs").innerHTML= wallet.Wei
 	document.getElementById("Dollars").innerHTML= wallet.Dollars
 	document.getElementById("FGValue").innerHTML= wallet.FGValue
+	
+	console.log("Item ", wallet.Items.Item)
+		for (const [key, value] of wallet.Items.Item.entries()) { //line 11
+			console.log(`${key} = ${value.name}`);
+		}
+	
+	document.getElementById("pending").innerHTML= debitFGs
   });
 </script>
 </header>
@@ -31,6 +38,8 @@ $.get(url, function(data, status){
 		<div id="Dollars"></div>
 		<label for="FGValue">Value of 1 FG       </label>
 		<div id="FGValue"></div>
+		<label for="Pending">PEnding FGs for Items Being Sold       </label>
+		<div id="Pending"></div>
 		
       </fieldset>
     </form>

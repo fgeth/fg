@@ -69,6 +69,7 @@ func main(){
 		common.MyNode.Ip = ipAddress
 	}
 	directory()
+	wallet()
 	common.MyNode.SaveNode(common.MyNode.Path)
 	fmt.Println("Node Id is :" , common.MyNode.Id)
 	fmt.Println("Node Ip is :" , common.MyNode.Ip)
@@ -155,7 +156,7 @@ func directory(){
 		
     }
 	
-	path =filepath.Join(common.MyNode.Path, "blcok")
+	path =filepath.Join(common.MyNode.Path, "block")
 	_, err = os.Stat(path)
 	if os.IsNotExist(err) {
 		err = os.Mkdir(path, 0755)
@@ -178,6 +179,11 @@ func directory(){
 		fmt.Println(err)
 		
     }
+
+}
+func wallet(){
+common.Wallet.Items.Item = map[string]item.Item{}
+common.Wallet.Items.Keys = map[string][]*ecdsa.PrivateKey{}
 
 }
 func server(){
@@ -262,11 +268,18 @@ func createNewItem(w http.ResponseWriter, r *http.Request) {
 	// item.Id =  strconv.FormatUint(uintD, 10)
 	theItem.Id = aHash
 	fmt.Println("Amount", theItem.Amount)
-	common.Wallet.Items.Item = map[string]item.Item{theItem.Id: theItem}
+	
 	theItem.Tx.Tx = map[string][]transaction.BaseTransaction{theItem.Id: createDebitTx(theItem.Amount, theItem)}
+	prvKey := crypto.GenerateRSAKey()
+	pubKey := prvKey.PublicKey
+	theItem.Seller = pubKey
+	path := filepath.Join(common.MyNode.Path, "Keys", theItem.Id) 
+	crypto.StoreRSAKey(prvKey, "Password", path)
 	theItem.SaveItem(common.MyNode.Path)
+	
+	common.Wallet.Items.Item[theItem.Id] = theItem
 	fmt.Println("New Item")
-	fmt.Println("Title ", theItem.Title)
+	fmt.Println("The Item: ", theItem)
 	fmt.Println("Num Debit Tx ", len(theItem.Tx.Tx[theItem.Id]))
 	for x :=0; x < len(theItem.Tx.Tx[theItem.Id]); x +=1{
 			fmt.Println("Debit Amount", theItem.Tx.Tx[theItem.Id][x].Amount)
@@ -296,7 +309,7 @@ func createDebitTx(amt float64, item item.Item)[]transaction.BaseTransaction{
 			PubKey := &PrvKey.PublicKey
 			PrvKeys = append(PrvKeys, PrvKey)
 			Debit.OTP = crypto.EncodePubKey(PubKey)
-			
+			Debit.HashBaseTx(Debit.OTP)
 			txs = append(txs, Debit)
 		}
 		leftOver := amt -total
@@ -309,6 +322,7 @@ func createDebitTx(amt float64, item item.Item)[]transaction.BaseTransaction{
 			PubKey := &PrvKey.PublicKey
 			PrvKeys = append(PrvKeys, PrvKey)
 			Debit.OTP = crypto.EncodePubKey(PubKey)
+			Debit.HashBaseTx(Debit.OTP)
 			txs = append(txs, Debit)
 		}
 		
@@ -324,6 +338,7 @@ func createDebitTx(amt float64, item item.Item)[]transaction.BaseTransaction{
 			PubKey := &PrvKey.PublicKey
 			PrvKeys = append(PrvKeys, PrvKey)
 			Debit.OTP = crypto.EncodePubKey(PubKey)
+			Debit.HashBaseTx(Debit.OTP)
 			txs = append(txs, Debit)
 		}
 		leftOver := amt -total
@@ -336,11 +351,13 @@ func createDebitTx(amt float64, item item.Item)[]transaction.BaseTransaction{
 			PubKey := &PrvKey.PublicKey
 			PrvKeys = append(PrvKeys, PrvKey)
 			Debit.OTP = crypto.EncodePubKey(PubKey)
+			Debit.HashBaseTx(Debit.OTP)
 			txs = append(txs, Debit)
 		}
 	}
 	fmt.Println("Number of Txs:=", len(txs))
-	common.Wallet.Items.Keys = map[string][]*ecdsa.PrivateKey{item.Id: PrvKeys}
+	
+	common.Wallet.Items.Keys[item.Id] = PrvKeys
 	
 	return txs
 }

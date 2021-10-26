@@ -58,12 +58,12 @@ func CreateItem(id string, productId string, title string, description string, a
 
 func (item *Item) SaveItem(dirname string){
    
-	path :=filepath.Join(dirname, "fg", "items")
+	path :=filepath.Join(dirname, "items")
 	 
 	_, err := os.Stat(path)
 	
     if os.IsNotExist(err) {
-		err := os.Mkdir(filepath.Join(dirname, "fg"), 0755)
+		err := os.Mkdir(dirname, 0755)
 		fmt.Println(err)
 		err2 := os.Mkdir(path, 0755)
 		fmt.Println(err2)
