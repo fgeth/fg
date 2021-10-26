@@ -37,7 +37,7 @@ var (
 	port 	  string
 	ipAddress  string
 	Gen		  *bool
-
+	r = mux.NewRouter()
 	
 )
 
@@ -94,7 +94,8 @@ func main(){
 		//common.GetTxs()
 	}
 	wg.Add(1)
-	//go server()
+	http.Handle("/", r)
+	go server()
 	torServer()
 	//TorService()
 	//time.Sleep(time.Second * 120)
@@ -196,7 +197,7 @@ common.Wallet.Items.Keys = map[string][]*ecdsa.PrivateKey{}
 func server(){
 	wg.Add(1)
 	defer wg.Done()
-	r := mux.NewRouter()
+	
     
 	//r.HandleFunc("/", home).Methods("GET")
 	//r.HandleFunc("/getBlocks", sendBlocks).Methods("GET")
@@ -210,7 +211,7 @@ func server(){
 	r.HandleFunc("/addItem", createNewItem).Methods("POST")
 	//r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
-	//http.Handle("/", r)
+	
 	
 	
 	staticFileDirectory := http.Dir(path)
@@ -236,17 +237,14 @@ func torServer() error {
 	}
 	defer t.Close()
 	// Add a handler
+	
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, Dark World!"))
 	})
 	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
 	r.HandleFunc("/block", createNewBlock).Methods("POST")
 	r.HandleFunc("/addItem", createNewItem).Methods("POST")
-	staticFileDirectory := http.Dir(path)
 	
-	staticFileHandler := http.StripPrefix("/store/", http.FileServer(staticFileDirectory))
-	
-	r.PathPrefix("/store/").Handler(staticFileHandler).Methods("GET")
 	// Wait at most a few minutes to publish the service
 	listenCtx, listenCancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer listenCancel()
