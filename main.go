@@ -26,8 +26,8 @@ import(
 	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
-	"github.com/cretz/bine/tor"
-	//"github.com/wybiral/torgo"
+	"github.com/fgeth/bine/tor"
+
 
 )
 var (
@@ -35,16 +35,16 @@ var (
 	wg 		 sync.WaitGroup
 	path	  string
 	port 	  string
-	ipAddress  string
+	torPort	  string 		//Port Tor is running on
 	Gen		  *bool
-	r = mux.NewRouter()
+	
 	
 )
 
 func init() {
 			flag.StringVar(&port, "port", "42069", "Default Port")
 			flag.StringVar(&path, "path", "/var/fg", "Data Directory")
-			flag.StringVar(&ipAddress, "ip", "127.0.0.1", "Default IP")
+			flag.StringVar(&torPort, "torPort", "9051", "Default Port")
 	Gen = 	flag.Bool("gen", false, "Continue with existing chain")
 	
 }
@@ -69,14 +69,15 @@ func main(){
 	if port !="42069"{
 		common.MyNode.Port = ":"+port
 		}
-	if ipAddress !="127.0.0.1"{
-		common.MyNode.Ip = ipAddress
-	}
+	if torPort !="9051"{
+		common.MyNode.Tor = ":"+torPort
+		}
+	
 	directory()
 	wallet()
 	common.MyNode.SaveNode(common.MyNode.Path)
 	fmt.Println("Node Id is :" , common.MyNode.Id)
-	fmt.Println("Node Ip is :" , common.MyNode.Ip)
+	//fmt.Println("Node Ip is :" , common.MyNode.Ip)
 	fmt.Println("Node Path is :" , common.MyNode.Path)
 	test()
 	
@@ -94,9 +95,10 @@ func main(){
 		//common.GetTxs()
 	}
 	wg.Add(1)
-	http.Handle("/", r)
 	go server()
 	torServer()
+	
+	
 	//TorService()
 	//time.Sleep(time.Second * 120)
 	
@@ -198,9 +200,9 @@ func server(){
 	wg.Add(1)
 	defer wg.Done()
 	
-    
+    r := mux.NewRouter()
 	//r.HandleFunc("/", home).Methods("GET")
-	//r.HandleFunc("/getBlocks", sendBlocks).Methods("GET")
+	r.HandleFunc("/getBlocks", sendBlocks).Methods("GET")
 	//r.HandleFunc("/getNodes", sendNodes).Methods("GET")
 	//r.HandleFunc("/getTxs", sendTxs).Methods("GET")
 	r.HandleFunc("/getWallet", GetWallet).Methods("GET")
@@ -221,7 +223,11 @@ func server(){
 	r.PathPrefix("/store/").Handler(staticFileHandler).Methods("GET")
 	
 	fmt.Println("Listening on port :", 80)
-if err := http.ListenAndServe(":80", nil); err != nil {
+	server := &http.Server{
+    Addr:    ":80",
+    Handler: r,
+		}
+if err := server.ListenAndServe(); err != nil {
 	    	log.Fatal(err)
 	   }
 	   
@@ -230,14 +236,15 @@ if err := http.ListenAndServe(":80", nil); err != nil {
 func torServer() error {
 	// Start tor with default config (can set start conf's DebugWriter to os.Stdout for debug logs)
 	fmt.Println("Starting and registering onion service, please wait a couple of minutes...")
-	t, err := tor.Start(nil, nil)
+	t, err := tor.Start(nil, nil,common.MyNode.Path )
 	r := mux.NewRouter()
 	if err != nil {
 		return err
 	}
 	defer t.Close()
 	// Add a handler
-	
+	http.Handle("/", r)
+
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, Dark World!"))
 	})
@@ -258,7 +265,7 @@ func torServer() error {
 	// Serve on HTTP
 	fmt.Printf("Listening on port :", common.MyNode.Port)
 	fmt.Printf("Open Tor browser and navigate to http://%v.onion\n", onion.ID)
-	common.MyNode.Ip = onion.ID
+	common.MyNode.OA = onion.ID
 	return http.Serve(onion, nil)
 	
 }
@@ -299,6 +306,14 @@ func createNewBlock(w http.ResponseWriter, r *http.Request) {
 		
 		json.NewEncoder(w).Encode(block)
 	}
+}
+
+func sendBlocks(w http.ResponseWriter, r *http.Request){
+	reqBody, _ := ioutil.ReadAll(r.Body)
+	var block2 block.Block
+    json.Unmarshal(reqBody, &block2)
+	Block := block.ImportBlock(block2.ChainYear, block2.BlockNumber, common.MyNode.Path)
+	json.NewEncoder(w).Encode(Block)
 }
 
 
@@ -491,8 +506,8 @@ func NewNode() node.Node{
 	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
 	node.Port = ":"+ port
 	node.Path = path
-	fmt.Println("Ip Address:", ipAddress)
-	node.Ip = ipAddress
+	//fmt.Println("Ip Address:", ipAddress)
+	node.Tor = torPort
 	node.Leader = false
 	node.Writer =false
 	return node

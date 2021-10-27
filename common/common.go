@@ -3,11 +3,13 @@ package common
 import (
 	 "bytes"
 	 "crypto/ecdsa"
+	 "crypto/tls"
 	 "encoding/json"
 	 "fmt"
 	 "io/ioutil"
 	 "math/big"
 	 "net/http"
+	//"net/http/cookiejar"
 	 "os"
 	 "path/filepath"
 	 "strconv"
@@ -20,6 +22,7 @@ import (
 	 "github.com/fgeth/fg/node"
 	 "github.com/fgeth/fg/transaction"
 	 "github.com/fgeth/fg/wallet"
+	 "golang.org/x/net/proxy"
 )
 
 var (
@@ -47,11 +50,16 @@ var (
 	Path				string							//Path to Data dirctory
 	Trusted				[]*ecdsa.PublicKey				//PublicKey of Fgeth Servers
 	Wallet				wallet.Wallet
+	OC					OnionClient
+	Cookies         	[]*http.Cookie
 )
 
 type Nodes struct {
 	Node 			map[string]node.Node  				//All active and inactive Nodes.  Easy to get PublicKey using string of public key as map index 
 
+}
+type OnionClient struct {
+	client *http.Client
 }
 
 //Increments ChainYear by one
@@ -679,22 +687,64 @@ func SendTransaction(tx transaction.Transaction) bool{
 	return false
 }
 
+func TorDialer(base string) error{
+torDialer, err := proxy.SOCKS5("tcp", MyNode.Tor, nil, proxy.Direct)
+		transportConfig := &http.Transport{
+		Dial:            torDialer.Dial,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		//cookieJar, _ := cookiejar.New(nil)
+		//cookieJar.SetCookies(base, Cookies)
+		OC.client = &http.Client{
+		Transport: transportConfig,
+		Timeout: time.Second * 120,
+		}
+		
+		//OC.client = &http.Client{
+		//Transport: transportConfig,
+		//Jar:       cookieJar,
+		//Timeout: time.Second * 120,
+		//}
+		//OC.client.Get(url)
+		return err
+
+}
 
 func SubmitTransaction(tx transaction.Transaction, writer string) bool{
 	json, _:= json.Marshal(tx)
+	
 	 if node, ok :=TheNodes.Node[writer]; ok{
 		call := "sendTx"
 		//call = block, node, tx, or account
-		url := fmt.Sprintf("http://%i:%p/%t", node.Ip, node.Port, call)
-		
-		resp, err := http.Post(url, "application/json", bytes.NewBuffer(json))
+		url := fmt.Sprintf("http://%i:%p/%t", node.OA, call)
+		err :=TorDialer(url)
+		if err !=nil{
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
 
-		if err != nil {
-		  // handle error and try next node
-		  return false
+			if err != nil {
+			  // Error reading Tx data
+			  return false
+			}
+			req.Header.Set("Content-Type", "application/json")
+			// Send request
+			resp, err := OC.client.Do(req)
+			if err != nil {
+				fmt.Println("Error reading response. ", err)
+			}
+			defer resp.Body.Close()
+
+			fmt.Println("response Status:", resp.Status)
+			fmt.Println("response Headers:", resp.Header)
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				fmt.Println("Error reading body. ", err)
+			}
+
+			fmt.Printf("%s\n", body)
+			
+			return true
 		}
-		fmt.Println(resp)
-		return true
 	}
 	return false
 
