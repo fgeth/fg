@@ -44,6 +44,14 @@ func ImportBlocks(blockNumber uint64) {
 func SignGenesisBlocks(){
 
 }
+
+func i64tob(val uint64) []byte {
+	r := make([]byte, 8)
+	for i := uint64(0); i < 8; i++ {
+		r[i] = byte((val >> (i * 8)) & 0xff)
+	}
+	return r
+}
 //Accepts blockNumber and Onion Address to get block
 func GetBlock(x uint64, OA string) block.Block{
 		//var block1 block.MinBlock
@@ -52,11 +60,11 @@ func GetBlock(x uint64, OA string) block.Block{
 		//block1.ChainYear = ChainYear
 		//data, err:= json.Marshal(block1)
 		var dst []byte
-		BN :=fasthttp.ArgsKV{[]byte("BlockNumber"), []byte(x), false}
-		CY :=fasthttp.ArgsKV{[]byte("ChainYear"), []byte(ChainYear), false}
-		var postArgs *fasthttp.Args
-		postArgs = append(postArgs, BN)
-		postArgs = append(postArgs, CY)
+		BN :=fasthttp.ArgsKV{[]byte("BlockNumber"), i64tob(x), false}
+		CY :=fasthttp.ArgsKV{[]byte("ChainYear"), i64tob(ChainYear), false}
+		var postArgs fasthttp.Args
+		postArgs.Args = append(postArgs.Args, BN)
+		postArgs.Args = append(postArgs.Args, CY)
 		
 		
 		//type Args struct {
@@ -74,11 +82,11 @@ func GetBlock(x uint64, OA string) block.Block{
 		//	fmt.Println("Error Marshalling Block")
 		//}
 		//fmt.Println("Data :", data)
-		//call := "getBlock"
+		call := "getBlock"
 		//call = block, node, tx, or account
 		url1 := OA +"/"+call
 		fmt.Println("url:", url1)
-		err = TorDialer(url1)
+		err := TorDialer(url1)
 		if err ==nil{
 				//bytes.NewBuffer
 			//p := "http://127.0.0.1:"+MyNode.Tor	
@@ -87,25 +95,26 @@ func GetBlock(x uint64, OA string) block.Block{
 			c := &fasthttp.Client{
 				Dial: fasthttpproxy.FasthttpSocksDialer("socks5://localhost:9050"),
 			}
-			resp, err := c.Post( dst, url1, postArgs)
+			//statusCode int, body []byte, err error
+			status, resp, err := c.Post( dst, url1, &postArgs)
 
 			if err != nil {
 			  // Error reading Block data
 			  fmt.Println("Error reading Block", err)
 			}else{
 			
-			defer resp.Body.Close()
+			//defer resp.Body.Close()
 
-			fmt.Println("response Status:", resp.Status)
-			fmt.Println("response Headers:", resp.Header)
+			fmt.Println("response Status:", status)
+			//fmt.Println("response Headers:", resp.Header)
 
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				fmt.Println("Error reading body. ", err)
-			}
+			//body, err := ioutil.ReadAll(resp)
+			//if err != nil {
+			//	fmt.Println("Error reading body. ", err)
+			//}
 
-			fmt.Printf("%s\n", body)
-			 json.Unmarshal(body, &block2)
+			//fmt.Printf("%s\n", body)
+			 json.Unmarshal(resp, &block2)
 			}
 		}
 

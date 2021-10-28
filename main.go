@@ -27,6 +27,7 @@ import(
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
 	"github.com/fgeth/bine/tor"
+	"github.com/fgeth/fasthttp"
 
 
 )
@@ -333,9 +334,9 @@ func createNewBlock(w http.ResponseWriter, r *http.Request) {
 
 func sendBlock(w http.ResponseWriter, r *http.Request){
 	reqBody, _ := ioutil.ReadAll(r.Body)
-	var KV postArgs *Args
+	var KV *fasthttp.Args
     json.Unmarshal(reqBody, &KV)
-	Block := block.ImportBlock(KV[1].ChainYear, KV[0].BlockNumber, common.MyNode.Path)
+	Block := block.ImportBlock(KV.Args[1].Value, KV.Args[0].Value, common.MyNode.Path)
 	json.NewEncoder(w).Encode(Block)
 }
 
