@@ -333,9 +333,9 @@ func createNewBlock(w http.ResponseWriter, r *http.Request) {
 
 func sendBlock(w http.ResponseWriter, r *http.Request){
 	reqBody, _ := ioutil.ReadAll(r.Body)
-	var block2 block.MinBlock
-    json.Unmarshal(reqBody, &block2)
-	Block := block.ImportBlock(block2.ChainYear, block2.BlockNumber, common.MyNode.Path)
+	var KV postArgs *Args
+    json.Unmarshal(reqBody, &KV)
+	Block := block.ImportBlock(KV[1].ChainYear, KV[0].BlockNumber, common.MyNode.Path)
 	json.NewEncoder(w).Encode(Block)
 }
 

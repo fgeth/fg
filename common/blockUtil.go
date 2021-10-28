@@ -46,18 +46,37 @@ func SignGenesisBlocks(){
 }
 //Accepts blockNumber and Onion Address to get block
 func GetBlock(x uint64, OA string) block.Block{
-		var block1 block.MinBlock
+		//var block1 block.MinBlock
 		var block2 block.Block
-		block1.BlockNumber = x
-		block1.ChainYear = ChainYear
-		data, err:= json.Marshal(block1)
-		if err !=nil{
-			fmt.Println("Error Marshalling Block")
-		}
-		fmt.Println("Data :", data)
+		//block1.BlockNumber = x
+		//block1.ChainYear = ChainYear
+		//data, err:= json.Marshal(block1)
+		var dst []byte
+		BN :=fasthttp.ArgsKV{[]byte("BlockNumber"), []byte(x), false}
+		CY :=fasthttp.ArgsKV{[]byte("ChainYear"), []byte(ChainYear), false}
+		var postArgs *fasthttp.Args
+		postArgs = append(postArgs, BN)
+		postArgs = append(postArgs, CY)
+		
+		
+		//type Args struct {
+		//noCopy noCopy //nolint:unused,structcheck
+		//	args []argsKV
+		//	buf  []byte
+		//}
+
+		//type argsKV struct {
+		//key     []byte
+		//value   []byte
+		//noValue bool
+		//}
+		//if err !=nil{
+		//	fmt.Println("Error Marshalling Block")
+		//}
+		//fmt.Println("Data :", data)
 		//call := "getBlock"
 		//call = block, node, tx, or account
-		url1 := OA 
+		url1 := OA +"/"+call
 		fmt.Println("url:", url1)
 		err = TorDialer(url1)
 		if err ==nil{
@@ -68,7 +87,7 @@ func GetBlock(x uint64, OA string) block.Block{
 			c := &fasthttp.Client{
 				Dial: fasthttpproxy.FasthttpSocksDialer("socks5://localhost:9050"),
 			}
-			resp, err := c.Post( url1,"application/json", bytes.NewBuffer(data))
+			resp, err := c.Post( dst, url1, postArgs)
 
 			if err != nil {
 			  // Error reading Block data
