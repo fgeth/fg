@@ -13,6 +13,8 @@ import(
 	 "strconv"
 	 "time"
 	"github.com/fgeth/fg/block"
+	"github.com/fgeth/fasthttp"
+	"github.com/fgeth/fasthttp/fasthttpproxy"
 )
 
 
@@ -63,7 +65,10 @@ func GetBlock(x uint64, OA string) block.Block{
 			//p := "http://127.0.0.1:"+MyNode.Tor	
 			//proxy, _ := url.Parse(p) 
 			//http.DefaultTransport = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy)}}	
-			resp, err := OC.client.Post( url1,"application/json", bytes.NewBuffer(data))
+			c := &fasthttp.Client{
+				Dial: fasthttpproxy.FasthttpSocksDialer("socks5://localhost:9050"),
+			}
+			resp, err := c.Post( url1,"application/json", bytes.NewBuffer(data))
 
 			if err != nil {
 			  // Error reading Block data
