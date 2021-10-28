@@ -186,4 +186,10 @@ func ImportNode(dirname string) Node{
 	
 }
 
+func (node *Node) GetNodes(){
 
+}
+
+func (node *Node) RegisterNode(PubKey string){
+
+}

@@ -39,7 +39,10 @@ type SignedBlock struct {
 
 }
 
-
+type MinBlock struct{
+	ChainYear			uint64						//Year this block was created
+	BlockNumber			uint64						//Block Number
+}
 func (block *Block) GetUnsignedBlock() Block{
 
 	var unsigned Block
@@ -75,10 +78,8 @@ func (block *Block) SaveBlock(dirname string){
  
 	path :=filepath.Join(dirname, "chain", strconv.FormatUint(block.ChainYear, 10))
 	 
-	folderInfo, err := os.Stat(path)
-	if folderInfo.Name() !="" {
-			fmt.Println("")
-	}
+	_, err := os.Stat(path)
+	
     if os.IsNotExist(err) {
 		err := os.Mkdir(dirname, 0755)
 		fmt.Println(err)

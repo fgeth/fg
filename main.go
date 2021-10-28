@@ -96,6 +96,7 @@ func main(){
 	}
 	wg.Add(1)
 	go server()
+	go postTest()
 	torServer()
 	
 	
@@ -124,7 +125,17 @@ func Trusted(){
 	//0xe56806Ce4e39Eb570b772d1B75B5dB65e149be82577ceD5cfceB419c178A2cFb
 							  //0x75b5Db65e149be82577CED5CfCeb419c178a2cFb
 }
+func postTest(){
+	time.Sleep(1 * time.Minute)
+	block := common.GetBlock(0,common.MyNode.OA)
+	fmt.Println("Block Received Over TOR network")
+	fmt.Println("BlockNumber:", block.BlockNumber)
+	fmt.Println("ChainYear:", block.ChainYear)
+	fmt.Println("FGValue:", block.FGValue)
+	fmt.Println("Txs:", block.Txs)
+	
 
+}
 func test(){
 	BlockReward:= big.NewInt(0)
 	BlockReward.SetString("10000000000000000000", 10)
@@ -146,7 +157,19 @@ func test(){
 	common.Wallet.FGs = common.Wei2FG(BlockReward)
 	common.Wallet.Wei = BlockReward
 	common.Wallet.Dollars = common.FG2USD(BlockReward)
-
+	var block block.Block
+	common.ChainYear = uint64(2021)
+	block.BlockNumber = uint64(0)
+	block.ChainYear = common.ChainYear
+	block.FGValue = float64(.01)
+	block.Txs = append(block.Txs, tx1.TxHash)
+	block.NumTxs = uint64(1)
+	block. SaveBlock(common.MyNode.Path)
+	fmt.Println("PUBKey :", common.MyNode.PKStr)
+	common.Writers = append(common.Writers, common.MyNode.PKStr)
+	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
+	common.ImportBlocks(uint64(1))
+	fmt.Println("Blocks :", common.Chain.Blocks[0])
 }
 func directory(){
 
@@ -202,7 +225,7 @@ func server(){
 	
     r := mux.NewRouter()
 	//r.HandleFunc("/", home).Methods("GET")
-	r.HandleFunc("/getBlocks", sendBlocks).Methods("GET")
+	r.HandleFunc("/getBlock", sendBlock).Methods("GET")
 	//r.HandleFunc("/getNodes", sendNodes).Methods("GET")
 	//r.HandleFunc("/getTxs", sendTxs).Methods("GET")
 	r.HandleFunc("/getWallet", GetWallet).Methods("GET")
@@ -265,7 +288,7 @@ func torServer() error {
 	// Serve on HTTP
 	fmt.Printf("Listening on port :", common.MyNode.Port)
 	fmt.Printf("Open Tor browser and navigate to http://%v.onion\n", onion.ID)
-	common.MyNode.OA = onion.ID
+	common.MyNode.OA = "http://"+onion.ID +".onion"
 	return http.Serve(onion, nil)
 	
 }
@@ -308,9 +331,9 @@ func createNewBlock(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func sendBlocks(w http.ResponseWriter, r *http.Request){
+func sendBlock(w http.ResponseWriter, r *http.Request){
 	reqBody, _ := ioutil.ReadAll(r.Body)
-	var block2 block.Block
+	var block2 block.MinBlock
     json.Unmarshal(reqBody, &block2)
 	Block := block.ImportBlock(block2.ChainYear, block2.BlockNumber, common.MyNode.Path)
 	json.NewEncoder(w).Encode(Block)
@@ -435,7 +458,7 @@ func register() bool{
 	if len(common.ActiveNodes) >0{
 		haveNode = true	
 	}else{
-		//common.MyNode.GetNodes()
+		common.MyNode.GetNodes()
 		if len(common.ActiveNodes) >0{
 			haveNode = true	
 		}
@@ -443,7 +466,7 @@ func register() bool{
 	if haveNode {
 	for x:=0; x<len(common.ActiveNodes); x+=1{
 			
-			//common.MyNode.RegisterNode(common.ActiveNodes[x])
+			common.MyNode.RegisterNode(common.ActiveNodes[x])
 		}
 	}
 	return haveNode
