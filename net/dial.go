@@ -395,13 +395,13 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 	}
 
 	// Shadow the nettrace (if any) during resolve so Connect events don't fire for DNS lookups.
-	resolveCtx := ctx
-	if trace, _ := ctx.Value(nettrace.TraceKey{}).(*nettrace.Trace); trace != nil {
-		shadow := *trace
-		shadow.ConnectStart = nil
-		shadow.ConnectDone = nil
-		resolveCtx = context.WithValue(resolveCtx, nettrace.TraceKey{}, &shadow)
-	}
+	//resolveCtx := ctx
+	//if trace, _ := ctx.Value(nettrace.TraceKey{}).(*nettrace.Trace); trace != nil {
+	//	shadow := *trace
+	//	shadow.ConnectStart = nil
+	//	shadow.ConnectDone = nil
+	//	resolveCtx = context.WithValue(resolveCtx, nettrace.TraceKey{}, &shadow)
+	//}
 
 	//addrs, err := d.resolver().resolveAddrList(resolveCtx, "dial", network, address, d.LocalAddr)
 	//if err != nil {
@@ -425,7 +425,7 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn
 	if len(fallbacks) > 0 {
 		c, err = sd.dialParallel(ctx, primaries, fallbacks)
 	} else {
-		c, err = sd.dialSerial(ctx, primaries)
+		c, err = sd.dialSerial(ctx, address)
 	}
 	if err != nil {
 		return nil, err
@@ -521,34 +521,16 @@ func (sd *sysDialer) dialParallel(ctx context.Context, primaries, fallbacks addr
 
 // dialSerial connects to a list of addresses in sequence, returning
 // either the first successful connection, or the first error.
-func (sd *sysDialer) dialSerial(ctx context.Context, ras addrList) (Conn, error) {
+func (sd *sysDialer) dialSerial(ctx context.Context, ras string ) (Conn, error) {
 	var firstErr error // The error from the first address is most relevant.
 
 	for i, ra := range ras {
-		select {
-		case <-ctx.Done():
-			return nil, &OpError{Op: "dial", Net: sd.network, Source: sd.LocalAddr, Addr: ra, Err: mapErr(ctx.Err())}
-		default:
-		}
+	
 
 		dialCtx := ctx
-		if deadline, hasDeadline := ctx.Deadline(); hasDeadline {
-			partialDeadline, err := partialDeadline(time.Now(), deadline, len(ras)-i)
-			if err != nil {
-				// Ran out of time.
-				if firstErr == nil {
-					firstErr = &OpError{Op: "dial", Net: sd.network, Source: sd.LocalAddr, Addr: ra, Err: err}
-				}
-				break
-			}
-			if partialDeadline.Before(deadline) {
-				var cancel context.CancelFunc
-				dialCtx, cancel = context.WithDeadline(ctx, partialDeadline)
-				defer cancel()
-			}
-		}
+	
 
-		c, err := sd.dialSingle(dialCtx, ra)
+		c, err := sd.dialSingle(dialCtx, ras)
 		if err == nil {
 			return c, nil
 		}

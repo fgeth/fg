@@ -6,7 +6,7 @@ package proxy
 
 import (
 	"context"
-	"github.com/fgeth/fg/net/"
+	"github.com/fgeth/fg/net"
 	//"golang.org/x/net/internal/socks"
 	"github.com/fgeth/fg/socks"
 )
