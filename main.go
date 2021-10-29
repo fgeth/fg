@@ -45,7 +45,7 @@ var (
 func init() {
 			flag.StringVar(&port, "port", "42069", "Default Port")
 			flag.StringVar(&path, "path", "/var/fg", "Data Directory")
-			flag.StringVar(&torPort, "torPort", "9051", "Default Port")
+			flag.StringVar(&torPort, "torPort", "9151", "Default Port")
 	Gen = 	flag.Bool("gen", false, "Continue with existing chain")
 	
 }
@@ -70,7 +70,7 @@ func main(){
 	if port !="42069"{
 		common.MyNode.Port = ":"+port
 		}
-	if torPort !="9051"{
+	if torPort !="9151"{
 		common.MyNode.Tor = ":"+torPort
 		}
 	
@@ -336,7 +336,12 @@ func sendBlock(w http.ResponseWriter, r *http.Request){
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var KV *fasthttp.Args
     json.Unmarshal(reqBody, &KV)
-	Block := block.ImportBlock(KV.Args[1].Value, KV.Args[0].Value, common.MyNode.Path)
+	var chainYear uint64
+    chainYear = common.Byte2Uint64(KV.Args[1].Value)
+	var blockNum uint64
+    blockNum = common.Byte2Uint64(KV.Args[0].Value)
+	
+	Block := block.ImportBlock(chainYear, blockNum, common.MyNode.Path)
 	json.NewEncoder(w).Encode(Block)
 }
 

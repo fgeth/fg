@@ -92,8 +92,10 @@ func GetBlock(x uint64, OA string) block.Block{
 			//p := "http://127.0.0.1:"+MyNode.Tor	
 			//proxy, _ := url.Parse(p) 
 			//http.DefaultTransport = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy)}}	
+			p := "socks5://localhost:" + MyNode.Tor
 			c := &fasthttp.Client{
-				Dial: fasthttpproxy.FasthttpSocksDialer("socks5://localhost:9050"),
+				
+				Dial: fasthttpproxy.FasthttpSocksDialer(p),
 			}
 			//statusCode int, body []byte, err error
 			status, resp, err := c.Post( dst, url1, &postArgs)

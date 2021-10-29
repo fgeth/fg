@@ -1,7 +1,9 @@
 package common
 
 import (
+	 "bytes"
 	 "crypto/ecdsa"
+	 "encoding/binary"
 	 "fmt"
 	 //"io/ioutil"
 	 //"crypto/ecdsa"
@@ -86,7 +88,12 @@ func SwapTransaction(){
 	Mtx.Unlock()
 
 }
-
+ func Byte2Uint64 (byteArray []byte) uint64{
+	var ret uint64
+	buf := bytes.NewBuffer(byteArray)
+    binary.Read(buf, binary.BigEndian, &ret)
+	return ret
+ }
 //Trims Pending block transaction hashes since htere were over 1,000 trnasactions these need to be move to the next block
 func trimPTx(){
 	Mtx.Lock()
