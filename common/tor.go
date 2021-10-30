@@ -17,7 +17,7 @@ type OnionClient struct {
 
 
 func TorDialer(base string) error{
-torDialer, err := proxy.SOCKS5("tcp", MyNode.Tor, nil, proxy.Direct)
+torDialer, err := proxy.SOCKS5("tcp", MyNode.Ip, nil, proxy.Direct)
 		transportConfig := &http.Transport{
 		Dial:            torDialer.Dial,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},

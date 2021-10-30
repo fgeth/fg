@@ -1,7 +1,7 @@
 package common
 
 import(
-	"bytes"
+	//"bytes"
 	 "fmt" 
 	"github.com/fgeth/fg/block"
 	"github.com/fgeth/fg/crypto"
@@ -25,7 +25,7 @@ func ElectNodes(block block.Block) []uint64{
 	numTx := (PB.NumTxs/500)+1
 	var blockNode []uint64
 	var numNodes uint64
-	numNodes = uint64(len(block.Nodes))
+	numNodes = uint64(len(ActiveNodes))
 	if numNodes < 7{
 		numTx = numNodes
 	}else{
@@ -37,8 +37,8 @@ func ElectNodes(block block.Block) []uint64{
 			}
 		}
 	}
-	if bytes.Compare(block.BlockHash, block.HashBlock()) ==0 {
-	    uintA, uintB, uintC, uintD :=crypto.HashToUint64(block.BlockHash)
+	if block.BlockHash == block.HashBlock(){
+	    uintA, uintB, uintC, uintD :=crypto.B32HashToUint64([]byte(block.BlockHash))
 		
 		tmp := uint64(0)
 		bn := uint64(0)

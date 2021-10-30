@@ -1,7 +1,7 @@
 package block
 
 import (
-	"bytes"
+	//"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -21,8 +21,8 @@ type Block struct {
 	Txs			  		[]string					//Array of Transaction Hashes
 	NumTxs				uint64						//Number of Transactions Submited For this Block
 	Nodes				[]string					//This is current list of Nodes that responded to the last Block.  This array is what is used to determine Block Nodes. string is the nodes public key as a string
-	PBHash				crypto.Hash					//Hash of previous Block
-	BlockHash			crypto.Hash					//Hash of this Block which includes previous Blocks Hash & list of Nodes
+	PBHash				string						//Hash of previous Block
+	BlockHash			string						//Hash of this Block which includes previous Blocks Hash & list of Nodes
 	Writers				[]string					//Array of the Next Block Nodes PublicKey as string Based on Block Hash includes Leader
 	Signed				[]SignedBlock				//Signature of Block Nodes
 	BlockFailed			bool						//Used if Block fails to be created something happens to all Block Nodes
@@ -60,12 +60,27 @@ func (block *Block) GetUnsignedBlock() Block{
  return unsigned
 }
 
-func (block *Block) HashBlock() crypto.Hash{
-	kh :=crypto.NewKeccakState()
+func (block *Block) HashBlock() string{
+	//kh :=crypto.NewKeccakState()
 	unsignedBlock := block.GetUnsignedBlock()
 	json , _:= json.Marshal(unsignedBlock)
 	
-	blockHash :=crypto.HashData(kh, []byte(json))
+	blockHash :=crypto.HashTx([]byte(json))
+	fmt.Println("The Block  Hash :", blockHash)
+	return blockHash
+}
+
+func (block MinBlock) BlockHash() string{
+	//kh :=crypto.NewKeccakState()
+	
+	json , err:= json.Marshal(block)
+	if err !=nil{
+		fmt.Println("Error reading MiniBLock", err)
+		
+	}
+	
+	blockHash :=crypto.HashTx([]byte(json))
+	fmt.Println("The Hash :", blockHash)
 	return blockHash
 }
 
@@ -156,8 +171,8 @@ func (block *Block) VerifySig(index int) bool{
 
 	blockHash := block.HashBlock()
 	publicKey := crypto.DecodePubKey(block.Signed[index].NodeId)
-	if bytes.Compare(block.BlockHash, blockHash) ==0 {
-		return crypto.Verify(block.BlockHash, block.Signed[index].R, block.Signed[index].S, publicKey)
+	if block.BlockHash == blockHash{
+		return crypto.TxVerify([]byte(block.BlockHash), block.Signed[index].R, block.Signed[index].S, publicKey)
 	}else{
 		return false
 	}

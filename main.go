@@ -2,7 +2,7 @@ package main
 
 import(
 	"bytes"
-	"context"
+	//"context"
 	"crypto/ecdsa"
 	"fmt"
 	"flag"
@@ -15,7 +15,7 @@ import(
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
+	//"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -26,8 +26,8 @@ import(
 	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/transaction"
-	"github.com/fgeth/bine/tor"
-	"github.com/fgeth/fasthttp"
+	//"github.com/fgeth/bine/tor"
+	//"github.com/fgeth/fasthttp"
 
 
 )
@@ -36,7 +36,7 @@ var (
 	wg 		 sync.WaitGroup
 	path	  string
 	port 	  string
-	torPort	  string 		//Port Tor is running on
+	ipAddress string 		//Port Tor is running on
 	Gen		  *bool
 	
 	
@@ -45,7 +45,7 @@ var (
 func init() {
 			flag.StringVar(&port, "port", "42069", "Default Port")
 			flag.StringVar(&path, "path", "/var/fg", "Data Directory")
-			flag.StringVar(&torPort, "torPort", "9151", "Default Port")
+			flag.StringVar(&ipAddress, "ip", "127.0.0.1", "Default Port")
 	Gen = 	flag.Bool("gen", false, "Continue with existing chain")
 	
 }
@@ -66,19 +66,20 @@ func main(){
 			common.MyNode.PrvKey = crypto.DecodePrv(common.MyNode.PRKStr)
 		}
 	}
+	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
 	Trusted()
 	if port !="42069"{
 		common.MyNode.Port = ":"+port
 		}
-	if torPort !="9151"{
-		common.MyNode.Tor = ":"+torPort
+	if ipAddress !="127.0.0.1"{
+		common.MyNode.Ip = ipAddress
 		}
 	
 	directory()
 	wallet()
 	common.MyNode.SaveNode(common.MyNode.Path)
 	fmt.Println("Node Id is :" , common.MyNode.Id)
-	//fmt.Println("Node Ip is :" , common.MyNode.Ip)
+	fmt.Println("Node Ip is :" , common.MyNode.Ip)
 	fmt.Println("Node Path is :" , common.MyNode.Path)
 	test()
 	
@@ -98,7 +99,7 @@ func main(){
 	wg.Add(1)
 	go server()
 	go postTest()
-	torServer()
+	//torServer()
 	
 	
 	//TorService()
@@ -128,8 +129,8 @@ func Trusted(){
 }
 func postTest(){
 	time.Sleep(1 * time.Minute)
-	block := common.GetBlock(0,common.MyNode.OA)
-	fmt.Println("Block Received Over TOR network")
+	block := common.GetBlock(0)
+	fmt.Println("Block Received Over network")
 	fmt.Println("BlockNumber:", block.BlockNumber)
 	fmt.Println("ChainYear:", block.ChainYear)
 	fmt.Println("FGValue:", block.FGValue)
@@ -138,6 +139,9 @@ func postTest(){
 
 }
 func test(){
+
+	common.ActiveNodes = append(common.ActiveNodes, common.MyNode.PKStr)
+	
 	BlockReward:= big.NewInt(0)
 	BlockReward.SetString("10000000000000000000", 10)
 	bn :=common.BlockNumber + uint64(1)
@@ -226,7 +230,7 @@ func server(){
 	
     r := mux.NewRouter()
 	//r.HandleFunc("/", home).Methods("GET")
-	r.HandleFunc("/getBlock", sendBlock).Methods("GET")
+	r.HandleFunc("/getBlock", sendBlock).Methods("POST")
 	//r.HandleFunc("/getNodes", sendNodes).Methods("GET")
 	//r.HandleFunc("/getTxs", sendTxs).Methods("GET")
 	r.HandleFunc("/getWallet", GetWallet).Methods("GET")
@@ -246,9 +250,9 @@ func server(){
 	
 	r.PathPrefix("/store/").Handler(staticFileHandler).Methods("GET")
 	
-	fmt.Println("Listening on port :", 80)
+	fmt.Println("Listening on port :", common.MyNode.Port)
 	server := &http.Server{
-    Addr:    ":80",
+    Addr:    common.MyNode.Port,
     Handler: r,
 		}
 if err := server.ListenAndServe(); err != nil {
@@ -257,42 +261,42 @@ if err := server.ListenAndServe(); err != nil {
 	   
 }
 
-func torServer() error {
+//func torServer() error {
 	// Start tor with default config (can set start conf's DebugWriter to os.Stdout for debug logs)
-	fmt.Println("Starting and registering onion service, please wait a couple of minutes...")
-	t, err := tor.Start(nil, nil,common.MyNode.Path )
-	r := mux.NewRouter()
-	if err != nil {
-		return err
-	}
-	defer t.Close()
+//	fmt.Println("Starting and registering onion service, please wait a couple of minutes...")
+//	t, err := tor.Start(nil, nil,common.MyNode.Path )
+//	r := mux.NewRouter()
+//	if err != nil {
+//		return err
+//	}
+//	defer t.Close()
 	// Add a handler
-	http.Handle("/", r)
+//	http.Handle("/", r)
 
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, Dark World!"))
-	})
-	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
-	r.HandleFunc("/block", createNewBlock).Methods("POST")
-	r.HandleFunc("/addItem", createNewItem).Methods("POST")
+//	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+//		w.Write([]byte("Hello, Dark World!"))
+//	})
+//	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
+//	r.HandleFunc("/block", createNewBlock).Methods("POST")
+//	r.HandleFunc("/addItem", createNewItem).Methods("POST")
 	
 	// Wait at most a few minutes to publish the service
-	listenCtx, listenCancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer listenCancel()
+//	listenCtx, listenCancel := context.WithTimeout(context.Background(), 1*time.Minute)
+//	defer listenCancel()
 	// Create an onion service to listen on 42069 but show as 420
-	port, _ := strconv.Atoi(common.MyNode.Port)
-	onion, err := t.Listen(listenCtx, &tor.ListenConf{LocalPort: port , RemotePorts: []int{80}, Version3: true})
-	if err != nil {
-		return err
-	}
-	defer onion.Close()
+//	port, _ := strconv.Atoi(common.MyNode.Port)
+//	onion, err := t.Listen(listenCtx, &tor.ListenConf{LocalPort: port , RemotePorts: []int{80}, Version3: true})
+//	if err != nil {
+//		return err
+//	}
+//	defer onion.Close()
 	// Serve on HTTP
-	fmt.Printf("Listening on port :", common.MyNode.Port)
-	fmt.Printf("Open Tor browser and navigate to http://%v.onion\n", onion.ID)
-	common.MyNode.OA = "http://"+onion.ID +".onion"
-	return http.Serve(onion, nil)
+//	fmt.Printf("Listening on port :", common.MyNode.Port)
+//	fmt.Printf("Open Tor browser and navigate to http://%v.onion\n", onion.ID)
+//	common.MyNode.OA = "http://"+onion.ID +".onion"
+//	return http.Serve(onion, nil)
 	
-}
+//}
 
 
 //Function to check that new blocks are being made and if not start the process
@@ -334,14 +338,15 @@ func createNewBlock(w http.ResponseWriter, r *http.Request) {
 
 func sendBlock(w http.ResponseWriter, r *http.Request){
 	reqBody, _ := ioutil.ReadAll(r.Body)
-	var KV *fasthttp.Args
-    json.Unmarshal(reqBody, &KV)
-	var chainYear uint64
-    chainYear = common.Byte2Uint64(KV.Args[1].Value)
-	var blockNum uint64
-    blockNum = common.Byte2Uint64(KV.Args[0].Value)
+	var minBlock block.MinBlock
+    json.Unmarshal(reqBody, minBlock)
+	//var chainYear uint64
+    //chainYear = common.Byte2Uint64(KV.Args[1].Value)
+	//var blockNum uint64
+   // blockNum = common.Byte2Uint64(KV.Args[0].Value)
 	
-	Block := block.ImportBlock(chainYear, blockNum, common.MyNode.Path)
+	Block := block.ImportBlock(minBlock.ChainYear, minBlock.BlockNumber, common.MyNode.Path)
+	fmt.Println("Block from File:", Block)
 	json.NewEncoder(w).Encode(Block)
 }
 
@@ -533,10 +538,10 @@ func NewNode() node.Node{
 	node.PubKey = &node.PrvKey.PublicKey
 	node.Id = crypto.GetAddress(node.PubKey) 
 	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
-	node.Port = ":"+ port
+	node.Port = ":"+port
 	node.Path = path
-	//fmt.Println("Ip Address:", ipAddress)
-	node.Tor = torPort
+	fmt.Println("Ip Address:", ipAddress)
+	node.Ip = ipAddress
 	node.Leader = false
 	node.Writer =false
 	return node

@@ -81,7 +81,7 @@ package net
 import (
 	"context"
 	"errors"
-	"internal/poll"
+	//"poll"
 	"io"
 	"os"
 	"sync"
@@ -168,7 +168,7 @@ type Conn interface {
 }
 
 type conn struct {
-	fd *netFD
+	fd  string
 }
 
 func (c *conn) ok() bool { return c != nil && c.fd != nil }

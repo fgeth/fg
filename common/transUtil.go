@@ -210,7 +210,7 @@ func SubmitTransaction(tx transaction.Transaction, writer string) bool{
 	 if node, ok :=TheNodes.Node[writer]; ok{
 		call := "sendTx"
 		//call = block, node, tx, or account
-		url := fmt.Sprintf("http://%i:%p/%t", node.OA, call)
+		url := fmt.Sprintf("http://%i:%p/%t", node.Ip, node.Port, call)
 		err := TorDialer(url)
 		if err !=nil{
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))

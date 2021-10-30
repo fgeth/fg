@@ -17,7 +17,7 @@ import (
 
 type Node struct {
 	Id				string							//Node Public Key as a string
-	OA				string							//Node Onion Address
+	Ip				string							//Node Onion Address
 	Port			string							//Port that the node is running under
 	Path			string							//Path to save data to
 	PubKey			*ecdsa.PublicKey				//Nodes Public Key
@@ -26,7 +26,7 @@ type Node struct {
 	PRKStr			string							//Node PrivateKey as string	
 	Writer			bool							//True if a current Block Node 
 	Leader			bool							//True if the current Block Leader
-	Tor				string							//Port that Tor is running on
+	//Tor			string							//Port that Tor is running on
 	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
 	//Comms			Comm							//Node RSA Keys
 	
@@ -35,14 +35,14 @@ type Node struct {
 
 type SNode struct {
 	Id				string							//Node Public Key as a string
-	OA				string							//Node Onion Address
+	Ip				string							//Node Onion Address
 	Port			string							//Port that the node is running under
 	Path			string							//Path to save data to
 	PKStr			string							//Node PublicKey as string	
 	PRKStr			string							//Node PrivateKey as string	
 	Writer			bool							//True if a current Block Node 
 	Leader			bool							//True if the current Block Leader
-	Tor				string							//Port that Tor is running on
+	//Tor			string							//Port that Tor is running on
 	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
 	//Comms			Comm							//Node RSA Keys
 	
@@ -63,8 +63,8 @@ type Comm struct{
 func (node *Node) SNode() SNode{
 	var snode SNode
 		snode.Id =node.Id
-		snode.OA = node.OA
-		snode.Tor= node.Tor
+		snode.Ip = node.Ip
+		//snode.Tor= node.Tor
 		snode.Port = node.Port
 		snode.Path = node.Path
 		snode.PKStr = node.PKStr
@@ -76,8 +76,8 @@ func (node *Node) SNode() SNode{
 func (snode *SNode) Node() Node{
 	var node Node
 		node.Id=snode.Id
-		node.OA = snode.OA
-		node.Tor = snode.Tor
+		node.Ip = snode.Ip
+		//node.Tor = snode.Tor
 		node.Port = snode.Port
 		node.Path = snode.Path
 		node.PKStr = snode.PKStr

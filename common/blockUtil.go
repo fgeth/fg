@@ -6,15 +6,16 @@ import(
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
-	//"net/http"
+	"net/http"
 	//"net/url"
 	"os"
 	"path/filepath"
 	 "strconv"
 	 "time"
 	"github.com/fgeth/fg/block"
-	"github.com/fgeth/fasthttp"
-	"github.com/fgeth/fasthttp/fasthttpproxy"
+	"github.com/fgeth/fg/crypto"
+	//"github.com/fgeth/fasthttp"
+	//"github.com/fgeth/fasthttp/fasthttpproxy"
 )
 
 
@@ -34,7 +35,7 @@ func ImportBlocks(blockNumber uint64) {
 			
 			_ = json.Unmarshal([]byte(file), &block)
 		}else{
-			block = GetBlock(x, MyNode.OA)
+			block = GetBlock(x)
 		}
 		Chain.Blocks = append(Chain.Blocks, block)
 	}
@@ -52,19 +53,69 @@ func i64tob(val uint64) []byte {
 	}
 	return r
 }
-//Accepts blockNumber and Onion Address to get block
-func GetBlock(x uint64, OA string) block.Block{
-		//var block1 block.MinBlock
+
+func GetNodes( theHash string) []uint64{
+		numNodes := uint64(len(ActiveNodes))
+		var theNodes []uint64
+		var numN uint64
+		if theHash !=""{
+				uintA, uintB, uintC, uintD :=crypto.B32HashToUint64([]byte(theHash))
+				if numNodes <7 {
+					numN = numNodes
+				}else{
+					numN = uint64(7)
+				}
+				tmp := uint64(0)
+				bn := uint64(0)
+				for x :=uint64(0); x < numN; x +=1{
+						switch x%4{
+							case  1:
+								tmp = (uintA % numNodes)+x
+								
+									
+							case 2:
+								tmp = (uintB % numNodes)+x
+							
+							case 3:
+								tmp = (uintC % numNodes)+x
+							
+							case 4:
+								tmp = (uintD % numNodes)+x
+				
+						}	
+							if tmp > numNodes{
+								bn = tmp - numNodes
+							}else{
+								bn = tmp
+							}
+							theNodes  = append(theNodes, (bn))
+						
+					}
+					
+					
+			
+	}
+	return theNodes
+
+}
+//Accepts blockNumber and Node Address to get block
+func GetBlock(x uint64) block.Block{
+		var block1 block.MinBlock
 		var block2 block.Block
-		//block1.BlockNumber = x
-		//block1.ChainYear = ChainYear
-		//data, err:= json.Marshal(block1)
-		var dst []byte
-		BN :=fasthttp.ArgsKV{[]byte("BlockNumber"), i64tob(x), false}
-		CY :=fasthttp.ArgsKV{[]byte("ChainYear"), i64tob(ChainYear), false}
-		var postArgs fasthttp.Args
-		postArgs.Args = append(postArgs.Args, BN)
-		postArgs.Args = append(postArgs.Args, CY)
+		block1.BlockNumber = x
+		block1.ChainYear = ChainYear
+		data, err:= json.Marshal(block1)
+		if err !=nil{
+			fmt.Println("Error Reading Block", err)
+		}
+		theNodes := GetNodes(block1.BlockHash())
+		
+		//var dst []byte
+		//BN :=fasthttp.ArgsKV{[]byte("BlockNumber"), i64tob(x), false}
+		//CY :=fasthttp.ArgsKV{[]byte("ChainYear"), i64tob(ChainYear), false}
+		//var postArgs fasthttp.Args
+		//postArgs.Args = append(postArgs.Args, BN)
+		//postArgs.Args = append(postArgs.Args, CY)
 		
 		
 		//type Args struct {
@@ -84,30 +135,46 @@ func GetBlock(x uint64, OA string) block.Block{
 		//fmt.Println("Data :", data)
 		call := "getBlock"
 		//call = block, node, tx, or account
-		url1 := OA +"/"+call
-		fmt.Println("url:", url1)
-		err := TorDialer(url1)
-		if err ==nil{
+		//url1 := "http://"+MyNode.Ip+":"+MyNode.Port +"/"+call
+		for x:=0; x < len(theNodes); x +=1{
+			//TheNodes.Node[ActiveNodes[theNodes[x]]].Ip
+			//TheNodes.Node[ActiveNodes[theNodes[x]]].Port
+			
+			url1 := "http://"+ MyNode.Ip+ MyNode.Port+"/"+ call
+			fmt.Println("url:", url1)
+			 resp, err := http.Post(url1, "application/json", bytes.NewBuffer(data))
+
+			if err != nil {
+				fmt.Println("Error connectig to node trying next node ", err)
+			}else{
+
+				json.NewDecoder(resp.Body).Decode(&block2)
+				return block2
+			}
+		}
+		
+		//err := TorDialer(url1)
+		//if err ==nil{
 				//bytes.NewBuffer
 			//p := "http://127.0.0.1:"+MyNode.Tor	
 			//proxy, _ := url.Parse(p) 
 			//http.DefaultTransport = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy)}}	
-			p := "socks5://localhost:" + MyNode.Tor
-			c := &fasthttp.Client{
+		//	p := "socks5://localhost:" + MyNode.Tor
+		//	c := &fasthttp.Client{
 				
-				Dial: fasthttpproxy.FasthttpSocksDialer(p),
-			}
+		//		Dial: fasthttpproxy.FasthttpSocksDialer(p),
+		//	}
 			//statusCode int, body []byte, err error
-			status, resp, err := c.Post( dst, url1, &postArgs)
+		//	status, resp, err := c.Post( dst, url1, &postArgs)
 
-			if err != nil {
+		//	if err != nil {
 			  // Error reading Block data
-			  fmt.Println("Error reading Block", err)
-			}else{
+		//	  fmt.Println("Error reading Block", err)
+		//	}else{
 			
 			//defer resp.Body.Close()
 
-			fmt.Println("response Status:", status)
+		//	fmt.Println("response Status:", status)
 			//fmt.Println("response Headers:", resp.Header)
 
 			//body, err := ioutil.ReadAll(resp)
@@ -116,11 +183,12 @@ func GetBlock(x uint64, OA string) block.Block{
 			//}
 
 			//fmt.Printf("%s\n", body)
-			 json.Unmarshal(resp, &block2)
-			}
-		}
-
-	return block2
+		//	 json.Unmarshal(resp, &block2)
+			//}
+		//}
+return block2
+		
+		
 }
 //TODO GetBlocks
 func GetBlocks(){
@@ -262,9 +330,9 @@ func VerifyBlock(block *block.Block) bool{
 		//Verify that Block Leader and a Block Node signed the Block
 	if numNodes > 1{
 		//TODO Store Block to file, Replace Previous Block wtih This Block, 
-		if bytes.Compare(block.BlockHash, block.HashBlock()) ==0{	
+		if block.BlockHash ==block.HashBlock(){	
 			
-			if bytes.Compare(block.PBHash, PB.BlockHash) ==0{
+			if block.PBHash == PB.BlockHash{
 				if CheckBlock(block){
 					CB := ImportBlock(block)		// current saved block need to add the other block signatures
 					for x:=0; x < len(CB.Signed); x +=1{
