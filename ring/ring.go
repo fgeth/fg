@@ -66,16 +66,17 @@ func(r Ring) FindPeer() node.Node{
 var result node.Node
 var theUrl =""
 x:=0;
-	for a:=1; a<256; a +=1{
+	for a:=3; a<256; a +=1{
 		if a !=10{
 			for b:=0; b<256; b +=1{
 				if ((a !=172) &&(b <16 || b>31)) ||((a !=192) &&(b!=168)) {
 					for c:=0; c<256; c +=1{
 						for d:=0; d<256; d +=1{
 							if a != 10 || (a != 172 && (b <16 && b>31))|| (a !=192 && b != 168){
+								x +=1
 								theUrl = "http://"+strconv.Itoa(a)+"."+strconv.Itoa(b)+"."+strconv.Itoa(c)+"."+strconv.Itoa(d)
 								fmt.Print(theUrl)
-								timeout := 1 * time.Second
+								timeout := 3 * time.Second
 								url := theUrl +":42069"
 								_, err := net.DialTimeout("tcp",url, timeout)
 								if err !=nil{
@@ -83,22 +84,28 @@ x:=0;
 								}else{
 									x +=1
 									go r.CheckPeer42069(theUrl, strconv.Itoa(a),strconv.Itoa(b), strconv.Itoa(c), strconv.Itoa(d) )
-									if x % 5000 ==0 {
-										 time.Sleep(8 * time.Second)
+									if len(r.Table) > 0{
+										break
 									}
+									
 								}
-								timeout = 1 * time.Second
+
+								timeout = 3 * time.Second
 								url = theUrl +":80"
 								_, err = net.DialTimeout("tcp",url, timeout)
 								if err !=nil{
 									fmt.Println(" Port 80 Not Listening on ", theUrl)
 								}else{
-									x +=1
+									
 									go r.CheckPeer80(theUrl, strconv.Itoa(a),strconv.Itoa(b), strconv.Itoa(c), strconv.Itoa(d) )
-									if x % 5000 ==0 {
-										 time.Sleep(8 * time.Second)
+									if len(r.Table) > 0{
+										break
 									}
+									
 								}
+								if x % 5000 ==0 {
+										 time.Sleep(10 * time.Second)
+									}
 							}
 							
 						}

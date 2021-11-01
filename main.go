@@ -53,10 +53,10 @@ func init() {
 
 func main(){	
 	flag.Parse()
-	
+	common.MyNode.Id =uint64(0)
 	common.MyNode = node.ImportNode(path)
 	
-	if common.MyNode.Id >0{
+	if common.MyNode.Id ==0{
 		common.MyNode = NewNode()
 
 	}else{
@@ -69,33 +69,45 @@ func main(){
 	}
 	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
 	common.Ring = NewRing()
-	common.Ring.FindPeer()
-	go RegisterNode()
+	finger := ring.FingerTable{Id : uint64(0), Node: NodeOne()}
+	common.Ring.Table = append(common.Ring.Table, finger)
+	finger = ring.FingerTable{Id : uint64(1), Node : NodeTwo()}
+	common.Ring.Table = append(common.Ring.Table, finger)
+
 	
-	Trusted()
-	if port !="42069"{
-		common.MyNode.Port = ":"+port
-		}
-	if ipAddress !="127.0.0.1"{
-		common.MyNode.Ip = ipAddress
-		}
 	
-	directory()
-	wallet()
-	common.MyNode.SaveNode(common.MyNode.Path)
-	fmt.Println("Node Id is :" , common.MyNode.Id)
-	fmt.Println("Node Ip is :" , common.MyNode.Ip)
-	fmt.Println("Node Path is :" , common.MyNode.Path)
-	test()
+	
 	
 	if *Gen{
 		fmt.Println("Genesis Block")
 		common.FGValue = .01
 		//common.ImportBlocks()
 		//common.ImportTxs()
-		common.SignGenesisBlocks() 
+		//common.SignGenesisBlocks() 
 	}else{
-		go register()
+		RegisterNode()
+	
+		if common.MyNode.Id == 0{
+		//	common.Ring.FindPeer()
+			 RegisterNode()
+		}else{
+			fmt.Println("Node Id: ", common.MyNode.Id)
+		}
+		Trusted()
+		if port !="42069"{
+			common.MyNode.Port =":"+ port
+			}
+		if ipAddress !="127.0.0.1"{
+			common.MyNode.Ip = ipAddress
+		}
+	
+		directory()
+		wallet()
+		common.MyNode.SaveNode(common.MyNode.Path)
+		fmt.Println("Node Id is :" , common.MyNode.Id)
+		fmt.Println("Node Ip is :" , common.MyNode.Ip)
+		fmt.Println("Node Path is :" , common.MyNode.Path)
+		test()
 		//common.ImportBlocks()
 		//common.ImportTxs()
 		//common.GetBlocks()
@@ -378,22 +390,25 @@ func RegisterNode( ) {
 	nodeJson, _ := json.Marshal(common.MyNode)
 	for x:=0; x < len(common.Ring.Table); x +=1{
 		url := "http://"+common.Ring.Table[x].Node.Ip+":"+common.Ring.Table[x].Node.Port+"/newNode"
+		fmt.Println("Connecting to Ring at :", url)
 		resp, err := http.Post(url, "application/json", bytes.NewBuffer(nodeJson))
 
 		if err != nil {
 			fmt.Println("Could not make POST request to ring")
-		}
-
-		body, err := ioutil.ReadAll(resp.Body)
-
-		var result node.Node
-		err = json.Unmarshal([]byte(body), &result)
-		if err != nil {
-			fmt.Println("Error unmarshaling data from request.")
 		}else{
-			common.MyNode.Id = result.Id
-			common.Ring.Id = result.Id
-			break
+
+			body, err := ioutil.ReadAll(resp.Body)
+
+			var result node.Node
+			err = json.Unmarshal([]byte(body), &result)
+			if err != nil {
+				fmt.Println("Error unmarshaling data from request.")
+			}else{
+				common.MyNode.Id = result.Id
+				common.Ring.Id = result.Id
+				fmt.Println(" Registered Node Id: ", common.MyNode.Id)
+				break
+			}
 		}
 	}
 
@@ -596,6 +611,21 @@ func NewNode() node.Node{
 	node.Ip = ipAddress
 	node.Leader = false
 	node.Writer =false
+	return node
+}
+
+
+func NodeTwo() node.Node{
+	var node node.Node
+	node.Port = ":"+port
+	node.Ip = "3.18.255.36"
+	return node
+}
+
+func NodeOne() node.Node{
+	var node node.Node
+	node.Port = ":"+port
+	node.Ip = "18.188.246.213"
 	return node
 }
 
