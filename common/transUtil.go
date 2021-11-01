@@ -211,20 +211,15 @@ func SubmitTransaction(tx transaction.Transaction, writer string) bool{
 		call := "sendTx"
 		//call = block, node, tx, or account
 		url := fmt.Sprintf("http://%i:%p/%t", node.Ip, node.Port, call)
-		err := TorDialer(url)
-		if err !=nil{
-			req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
 
+			//req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
+			resp, err := http.Post(url, "application/json", bytes.NewBuffer(json))
 			if err != nil {
-			  // Error reading Tx data
+			  fmt.Println("Error reading response. ", err)
+			
 			  return false
 			}
-			req.Header.Set("Content-Type", "application/json")
-			// Send request
-			resp, err := OC.client.Do(req)
-			if err != nil {
-				fmt.Println("Error reading response. ", err)
-			}
+			
 			defer resp.Body.Close()
 
 			fmt.Println("response Status:", resp.Status)
@@ -238,7 +233,7 @@ func SubmitTransaction(tx transaction.Transaction, writer string) bool{
 			fmt.Printf("%s\n", body)
 			
 			return true
-		}
+		
 	}
 	return false
 

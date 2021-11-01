@@ -69,8 +69,8 @@ func main(){
 	}
 	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
 	common.Ring = NewRing()
-	Peer := common.Ring.FindPeer()
-	go RegisterNode(Peer)
+	common.Ring.FindPeer()
+	go RegisterNode()
 	
 	Trusted()
 	if port !="42069"{
@@ -245,7 +245,7 @@ func server(){
 	//r.HandleFunc("/getNodes", sendNodes).Methods("GET")
 	//r.HandleFunc("/getTxs", sendTxs).Methods("GET")
 	r.HandleFunc("/getWallet", GetWallet).Methods("GET")
-	
+	r.HandleFunc("/getPeer", GetPeer).Methods("GET")
 	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
 	//r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
 	r.HandleFunc("/block", createNewBlock).Methods("POST")
@@ -374,24 +374,27 @@ func newNode(w http.ResponseWriter, r *http.Request) {
 	
 }
 
-func RegisterNode( Peer node.Node) {
-	nodeJson, err := json.Marshal(common.MyNode)
-	url := "http://"+Peer.Ip+":"+Peer.Port+"/newNode"
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(nodeJson))
+func RegisterNode( ) {
+	nodeJson, _ := json.Marshal(common.MyNode)
+	for x:=0; x < len(common.Ring.Table); x +=1{
+		url := "http://"+common.Ring.Table[x].Node.Ip+":"+common.Ring.Table[x].Node.Port+"/newNode"
+		resp, err := http.Post(url, "application/json", bytes.NewBuffer(nodeJson))
 
-    if err != nil {
-        fmt.Println("Could not make POST request to ring")
-    }
+		if err != nil {
+			fmt.Println("Could not make POST request to ring")
+		}
 
-    body, err := ioutil.ReadAll(resp.Body)
+		body, err := ioutil.ReadAll(resp.Body)
 
-    var result node.Node
-    err = json.Unmarshal([]byte(body), &result)
-    if err != nil {
-        fmt.Println("Error unmarshaling data from request.")
-    }else{
-		common.MyNode.Id = result.Id
-		common.Ring.Id = result.Id
+		var result node.Node
+		err = json.Unmarshal([]byte(body), &result)
+		if err != nil {
+			fmt.Println("Error unmarshaling data from request.")
+		}else{
+			common.MyNode.Id = result.Id
+			common.Ring.Id = result.Id
+			break
+		}
 	}
 
 	
@@ -507,6 +510,11 @@ func GetWallet(w http.ResponseWriter, r *http.Request){
 	json.NewEncoder(w).Encode(common.Wallet)
 }
 
+func GetPeer(w http.ResponseWriter, r *http.Request){
+	
+
+	json.NewEncoder(w).Encode(common.MyNode)
+}
 //TODO Fix this
 func register() bool{
 	haveNode := false

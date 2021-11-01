@@ -52,7 +52,6 @@ var (
 	Path				string							//Path to Data dirctory
 	Trusted				[]*ecdsa.PublicKey				//PublicKey of Fgeth Servers
 	Wallet				wallet.Wallet
-	OC					OnionClient
 	Cookies         	[]*http.Cookie
 )
 
