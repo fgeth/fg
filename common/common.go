@@ -20,6 +20,7 @@ import (
 	 "github.com/fgeth/fg/crypto"
 	 "github.com/fgeth/fg/item"
 	 "github.com/fgeth/fg/node"
+	 "github.com/fgeth/fg/ring"
 	 "github.com/fgeth/fg/transaction"
 	 "github.com/fgeth/fg/wallet"
 	 
@@ -27,6 +28,7 @@ import (
 
 var (
 	ChainYear			uint64							//Current Year
+	Ring				ring.Ring						//Block Ring
 	BlockNumber			uint64							//Current Block Number
 	ActiveNodes			[]string						//Array of known active Nodes Public Key as string
 	PB					*block.Block						//Current Block This is the Last Know Verified Block

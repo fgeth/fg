@@ -16,7 +16,7 @@ import (
 )
 
 type Node struct {
-	Id				string							//Node Public Key as a string
+	Id				uint64							//Node Ring Location
 	Ip				string							//Node Onion Address
 	Port			string							//Port that the node is running under
 	Path			string							//Path to save data to
@@ -34,7 +34,7 @@ type Node struct {
 }
 
 type SNode struct {
-	Id				string							//Node Public Key as a string
+	Id				uint64							//Node Ring Location
 	Ip				string							//Node Onion Address
 	Port			string							//Port that the node is running under
 	Path			string							//Path to save data to
@@ -49,7 +49,12 @@ type SNode struct {
 	
 }
 
-
+type RNode struct {
+	Id				uint64							//Node Public Key as a uint64
+	PKStr			string							//Node PublicKey as string	
+	
+	
+}
 
 
 

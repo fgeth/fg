@@ -25,6 +25,7 @@ import(
 	"github.com/fgeth/fg/crypto"
 	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/node"
+	"github.com/fgeth/fg/ring"
 	"github.com/fgeth/fg/transaction"
 	//"github.com/fgeth/bine/tor"
 	//"github.com/fgeth/fasthttp"
@@ -55,7 +56,7 @@ func main(){
 	
 	common.MyNode = node.ImportNode(path)
 	
-	if common.MyNode.Id ==""{
+	if common.MyNode.Id >0{
 		common.MyNode = NewNode()
 
 	}else{
@@ -67,6 +68,10 @@ func main(){
 		}
 	}
 	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
+	common.Ring = NewRing()
+	Peer := common.Ring.FindPeer()
+	go RegisterNode(Peer)
+	
 	Trusted()
 	if port !="42069"{
 		common.MyNode.Port = ":"+port
@@ -111,6 +116,12 @@ func main(){
 	
 }
 
+func NewRing() ring.Ring{
+	var finger []ring.FingerTable
+	var rnodes []node.RNode
+	ring := ring.Ring {uint64(0), finger, rnodes }
+	return ring
+}
 func Trusted(){
 	fg1 :="-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7mqd2vQKqyk/Xy171L/0YFnqT4Uy\nfXJeUmK41oNakzblaAbOTjnrVwt3LRt1tdtl4Um+gld87Vz860GcF4os+w==\n-----END PUBLIC KEY-----\n"
 	pubKey := crypto.DecodePubKey(fg1)
@@ -239,7 +250,7 @@ func server(){
 	//r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
 	r.HandleFunc("/block", createNewBlock).Methods("POST")
 	r.HandleFunc("/addItem", createNewItem).Methods("POST")
-	//r.HandleFunc("/newNode", newNode).Methods("POST")
+	r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
 	
 	
@@ -350,7 +361,41 @@ func sendBlock(w http.ResponseWriter, r *http.Request){
 	json.NewEncoder(w).Encode(Block)
 }
 
+func newNode(w http.ResponseWriter, r *http.Request) {
+	reqBody, _ := ioutil.ReadAll(r.Body)
+    var theNode node.Node
+    json.Unmarshal(reqBody, &theNode)
+	var rnode node.RNode
+	rnode.Id,_,_,_ = crypto.B32HashToUint64([]byte(crypto.HashTx([]byte(theNode.PKStr))))
+	rnode.PKStr = theNode.PKStr
+	common.Ring.RotateKeys(rnode)
+	common.Ring.RotateFingerTable(theNode)
+	json.NewEncoder(w).Encode(theNode)
+	
+}
 
+func RegisterNode( Peer node.Node) {
+	nodeJson, err := json.Marshal(common.MyNode)
+	url := "http://"+Peer.Ip+":"+Peer.Port+"/newNode"
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(nodeJson))
+
+    if err != nil {
+        fmt.Println("Could not make POST request to ring")
+    }
+
+    body, err := ioutil.ReadAll(resp.Body)
+
+    var result node.Node
+    err = json.Unmarshal([]byte(body), &result)
+    if err != nil {
+        fmt.Println("Error unmarshaling data from request.")
+    }else{
+		common.MyNode.Id = result.Id
+		common.Ring.Id = result.Id
+	}
+
+	
+}
 func createNewItem(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
     var theItem item.Item
@@ -536,7 +581,6 @@ func NewNode() node.Node{
 	var node node.Node
 	node.PrvKey, _ = crypto.GenerateKey()
 	node.PubKey = &node.PrvKey.PublicKey
-	node.Id = crypto.GetAddress(node.PubKey) 
 	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
 	node.Port = ":"+port
 	node.Path = path
