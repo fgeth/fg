@@ -43,7 +43,8 @@ func(r Ring) RotateKeys(n node.RNode){
 
 func (r Ring) RotateFingerTable(n node.Node){
 	var tmpNode  node.Node
-for x:=0; x< 32; x +=1{
+	ft := len(r.Table)
+for x:=0; x< ft; x +=1{
 		
 		if r.Table[x].Id == n.Id{
 			tmpNode =r.Table[x].Node
@@ -54,6 +55,9 @@ for x:=0; x< 32; x +=1{
 		}
 
 
+}
+if ft <32{
+	r.Table = append(r.Table, FingerTable{Id: n.Id ,Node: n})
 }
 }
 

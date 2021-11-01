@@ -389,7 +389,7 @@ func newNode(w http.ResponseWriter, r *http.Request) {
 func RegisterNode( ) {
 	nodeJson, _ := json.Marshal(common.MyNode)
 	for x:=0; x < len(common.Ring.Table); x +=1{
-		url := "http://"+common.Ring.Table[x].Node.Ip+":"+common.Ring.Table[x].Node.Port+"/newNode"
+		url := "http://"+common.Ring.Table[x].Node.Ip+common.Ring.Table[x].Node.Port+"/newNode"
 		fmt.Println("Connecting to Ring at :", url)
 		resp, err := http.Post(url, "application/json", bytes.NewBuffer(nodeJson))
 
