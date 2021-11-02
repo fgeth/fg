@@ -85,11 +85,11 @@ func main(){
 		//common.ImportTxs()
 		//common.SignGenesisBlocks() 
 	}else{
-		RegisterNode()
+		//RegisterNode()
 	
 		if common.MyNode.Id == 0{
 		//	common.Ring.FindPeer()
-			 RegisterNode()
+			// RegisterNode()
 		}else{
 			fmt.Println("Node Id: ", common.MyNode.Id)
 		}
@@ -151,7 +151,9 @@ func Trusted(){
 							  //0x75b5Db65e149be82577CED5CfCeb419c178a2cFb
 }
 func postTest(){
-	time.Sleep(1 * time.Minute)
+	time.Sleep(5 * time.Second)
+	
+	common.ImportBlocks(uint64(0))
 	block := common.GetBlock(0)
 	fmt.Println("Block Received Over network")
 	fmt.Println("BlockNumber:", block.BlockNumber)
@@ -196,8 +198,8 @@ func test(){
 	fmt.Println("PUBKey :", common.MyNode.PKStr)
 	common.Writers = append(common.Writers, common.MyNode.PKStr)
 	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
-	common.ImportBlocks(uint64(1))
-	fmt.Println("Blocks :", common.Chain.Blocks[0])
+	
+	//fmt.Println("Blocks :", common.Chain.Blocks[0])
 }
 func directory(){
 
@@ -284,43 +286,6 @@ if err := server.ListenAndServe(); err != nil {
 	   
 }
 
-//func torServer() error {
-	// Start tor with default config (can set start conf's DebugWriter to os.Stdout for debug logs)
-//	fmt.Println("Starting and registering onion service, please wait a couple of minutes...")
-//	t, err := tor.Start(nil, nil,common.MyNode.Path )
-//	r := mux.NewRouter()
-//	if err != nil {
-//		return err
-//	}
-//	defer t.Close()
-	// Add a handler
-//	http.Handle("/", r)
-
-//	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-//		w.Write([]byte("Hello, Dark World!"))
-//	})
-//	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
-//	r.HandleFunc("/block", createNewBlock).Methods("POST")
-//	r.HandleFunc("/addItem", createNewItem).Methods("POST")
-	
-	// Wait at most a few minutes to publish the service
-//	listenCtx, listenCancel := context.WithTimeout(context.Background(), 1*time.Minute)
-//	defer listenCancel()
-	// Create an onion service to listen on 42069 but show as 420
-//	port, _ := strconv.Atoi(common.MyNode.Port)
-//	onion, err := t.Listen(listenCtx, &tor.ListenConf{LocalPort: port , RemotePorts: []int{80}, Version3: true})
-//	if err != nil {
-//		return err
-//	}
-//	defer onion.Close()
-	// Serve on HTTP
-//	fmt.Printf("Listening on port :", common.MyNode.Port)
-//	fmt.Printf("Open Tor browser and navigate to http://%v.onion\n", onion.ID)
-//	common.MyNode.OA = "http://"+onion.ID +".onion"
-//	return http.Serve(onion, nil)
-	
-//}
-
 
 //Function to check that new blocks are being made and if not start the process
 func fg(){
@@ -328,7 +293,7 @@ func fg(){
 	defer wg.Done()
 	for {
 		CheckBlockNumber := common.BlockNumber	
-		time.Sleep(time.Second * 60)
+		//time.Sleep(time.Second * 60)
 		if CheckBlockNumber == common.BlockNumber{
 			common.BlockFailed(common.BlockNumber)
 		}
@@ -361,13 +326,14 @@ func createNewBlock(w http.ResponseWriter, r *http.Request) {
 
 func sendBlock(w http.ResponseWriter, r *http.Request){
 	reqBody, _ := ioutil.ReadAll(r.Body)
+	fmt.Println("Request from Network:", reqBody)
 	var minBlock block.MinBlock
-    json.Unmarshal(reqBody, minBlock)
+    json.Unmarshal(reqBody, &minBlock)
 	//var chainYear uint64
     //chainYear = common.Byte2Uint64(KV.Args[1].Value)
 	//var blockNum uint64
    // blockNum = common.Byte2Uint64(KV.Args[0].Value)
-	
+	fmt.Println("Block from Network:", minBlock)
 	Block := block.ImportBlock(minBlock.ChainYear, minBlock.BlockNumber, common.MyNode.Path)
 	fmt.Println("Block from File:", Block)
 	json.NewEncoder(w).Encode(Block)

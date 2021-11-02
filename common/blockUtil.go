@@ -104,42 +104,18 @@ func GetBlock(x uint64) block.Block{
 		var block2 block.Block
 		block1.BlockNumber = x
 		block1.ChainYear = ChainYear
+		fmt.Println("ChainYear", block1.ChainYear)
 		data, err:= json.Marshal(block1)
 		if err !=nil{
 			fmt.Println("Error Reading Block", err)
 		}
+		fmt.Println("Block as Json", data)
 		theNodes := GetNodes(block1.BlockHash())
 		
-		//var dst []byte
-		//BN :=fasthttp.ArgsKV{[]byte("BlockNumber"), i64tob(x), false}
-		//CY :=fasthttp.ArgsKV{[]byte("ChainYear"), i64tob(ChainYear), false}
-		//var postArgs fasthttp.Args
-		//postArgs.Args = append(postArgs.Args, BN)
-		//postArgs.Args = append(postArgs.Args, CY)
-		
-		
-		//type Args struct {
-		//noCopy noCopy //nolint:unused,structcheck
-		//	args []argsKV
-		//	buf  []byte
-		//}
-
-		//type argsKV struct {
-		//key     []byte
-		//value   []byte
-		//noValue bool
-		//}
-		//if err !=nil{
-		//	fmt.Println("Error Marshalling Block")
-		//}
-		//fmt.Println("Data :", data)
 		call := "getBlock"
-		//call = block, node, tx, or account
-		//url1 := "http://"+MyNode.Ip+":"+MyNode.Port +"/"+call
+		
 		for x:=0; x < len(theNodes); x +=1{
-			//TheNodes.Node[ActiveNodes[theNodes[x]]].Ip
-			//TheNodes.Node[ActiveNodes[theNodes[x]]].Port
-			
+				
 			url1 := "http://"+ MyNode.Ip+ MyNode.Port+"/"+ call
 			fmt.Println("url:", url1)
 			 resp, err := http.Post(url1, "application/json", bytes.NewBuffer(data))
@@ -147,45 +123,11 @@ func GetBlock(x uint64) block.Block{
 			if err != nil {
 				fmt.Println("Error connectig to node trying next node ", err)
 			}else{
-
+				fmt.Println("Block as Json", data)
 				json.NewDecoder(resp.Body).Decode(&block2)
 				return block2
 			}
 		}
-		
-		//err := TorDialer(url1)
-		//if err ==nil{
-				//bytes.NewBuffer
-			//p := "http://127.0.0.1:"+MyNode.Tor	
-			//proxy, _ := url.Parse(p) 
-			//http.DefaultTransport = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy)}}	
-		//	p := "socks5://localhost:" + MyNode.Tor
-		//	c := &fasthttp.Client{
-				
-		//		Dial: fasthttpproxy.FasthttpSocksDialer(p),
-		//	}
-			//statusCode int, body []byte, err error
-		//	status, resp, err := c.Post( dst, url1, &postArgs)
-
-		//	if err != nil {
-			  // Error reading Block data
-		//	  fmt.Println("Error reading Block", err)
-		//	}else{
-			
-			//defer resp.Body.Close()
-
-		//	fmt.Println("response Status:", status)
-			//fmt.Println("response Headers:", resp.Header)
-
-			//body, err := ioutil.ReadAll(resp)
-			//if err != nil {
-			//	fmt.Println("Error reading body. ", err)
-			//}
-
-			//fmt.Printf("%s\n", body)
-		//	 json.Unmarshal(resp, &block2)
-			//}
-		//}
 return block2
 		
 		

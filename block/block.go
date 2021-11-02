@@ -121,11 +121,12 @@ func ImportBlock(chainYear uint64, blockNumber uint64, dirname string) Block{
 	path :=filepath.Join(dirname, "chain", strconv.FormatUint(chainYear, 10))
 
 	fileName := filepath.Join(path, strconv.FormatUint(blockNumber, 10))
-	myfile, e := os.Stat(fileName)
+	_, e := os.Stat(fileName)
+	fmt.Println("FileName", fileName )
 	if e != nil{
 	  fmt.Println( e )
 	}else{
-		file, _ := ioutil.ReadFile(myfile.Name())
+		file, _ := ioutil.ReadFile(fileName)
 		
 		_ = json.Unmarshal([]byte(file), &block)
 		
