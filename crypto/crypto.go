@@ -370,16 +370,19 @@ func Decode(pemEncoded string, pemEncodedPub string) (*ecdsa.PrivateKey, *ecdsa.
     return privateKey, publicKey
 }
 
-func StoreKey ( key *ecdsa.PrivateKey, auth string) error{
-prvKey, PubKey := Encode(key, &key.PublicKey)
-
+func StoreKey ( key *ecdsa.PrivateKey, auth, dirName string) (string, error){
+prvKey, _ := Encode(key, &key.PublicKey)
+PubKey := GetAddress(&key.PublicKey)
 keyjson, err := Encrypt([]byte(auth), []byte(prvKey))
 	if err != nil {
-		return err
+		fmt.Println("Error encrypting Key", err)
+		return PubKey, err
 	}
-	tmpName, err := WriteTemporaryKeyFile(PubKey, keyjson)
-	os.Rename(tmpName, PubKey)
-	return err
+	
+	wKey2File, err := WriteTemporaryKeyFile(dirName, PubKey, keyjson)
+	fmt.Println(wKey2File)
+	//os.Rename(tmpName, PubKey)
+	return PubKey, nil
 }
 
 
@@ -500,26 +503,30 @@ func generatePassword(passwordLength, minSpecialChar, minNum, minUpperCase int) 
 
 
 
-func WriteTemporaryKeyFile(file string, content []byte) (string, error) {
+func WriteTemporaryKeyFile(dirName, file string, content []byte) (string, error) {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
 	const dirPerm = 0700
-	if err := os.MkdirAll(filepath.Dir(file), dirPerm); err != nil {
-		return "", err
+	path :=filepath.Join(dirName, "Keys")
+	theFile:=filepath.Join(path, file)
+	fmt.Println("Saving Key to File", theFile)
+	_, err := os.Stat(path)
+	if err !=nil{
+		 if err := os.MkdirAll(filepath.Dir(path), dirPerm); err != nil {
+			return "Can not create directory ", err
+		}
+	}else{
+		// Atomic write: create a temporary hidden file first
+		// then move it into place. TempFile assigns mode 0600.
+	     err :=  ioutil.WriteFile(theFile, content, 0644)
+		if err != nil {
+			return "Could not create Key file", err
+		}
+		
+		return "Wrote Key to File", nil
 	}
-	// Atomic write: create a temporary hidden file first
-	// then move it into place. TempFile assigns mode 0600.
-	f, err := ioutil.TempFile(filepath.Dir(file), "."+filepath.Base(file)+".tmp")
-	if err != nil {
-		return "", err
-	}
-	if _, err := f.Write(content); err != nil {
-		f.Close()
-		os.Remove(f.Name())
-		return "", err
-	}
-	f.Close()
-	return f.Name(), nil
+	
+	return "", err
 }
 
 func GenerateRSAKey() rsa.PrivateKey{
@@ -599,7 +606,7 @@ func DecodeRSAPubKey( pemEncodedPub string) (rsa.PublicKey) {
 }
 
 
-func StoreRSAKey ( key rsa.PrivateKey, auth string, fileName string) error{
+func StoreRSAKey ( key rsa.PrivateKey, auth, fileName, dirName string) error{
 prvKey, PubKey := EncodeRSA(&key, &key.PublicKey)
 
 keyjson, err := Encrypt([]byte(auth), []byte(prvKey))
@@ -607,8 +614,9 @@ keyjson, err := Encrypt([]byte(auth), []byte(prvKey))
 		return err
 	}
 	fmt.Println(PubKey)
-	tmpName, err := WriteTemporaryKeyFile(fileName, keyjson)
-	os.Rename(tmpName, fileName)
+	wKey2File, err := WriteTemporaryKeyFile(dirName, fileName, keyjson)
+	fmt.Println(wKey2File)
+	//os.Rename(tmpName, fileName)
 	return err
 }
 

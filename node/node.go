@@ -26,6 +26,7 @@ type Node struct {
 	PRKStr			string							//Node PrivateKey as string	
 	Writer			bool							//True if a current Block Node 
 	Leader			bool							//True if the current Block Leader
+	Addresses		[]string						//Array of Public Keys as Addresses
 	PubKeys			[]*ecdsa.PublicKey				//Array of Public Keys
 	PrvtKeys		[]*ecdsa.PrivateKey				//Array of Private Keys
 	//Tor			string							//Port that Tor is running on
@@ -198,5 +199,41 @@ func (node *Node) GetNodes(){
 }
 
 func (node *Node) RegisterNode(PubKey string){
+
+}
+
+func (node *Node) SaveNodeOne(dirname string){
+	path :=filepath.Join(dirname, "node")
+	 //fmt.Println("Path ", path)
+	_, err := os.Stat(path)
+    
+	fileName := filepath.Join(path, "nodeOne.json")
+	snode:=node.SNode()
+	file, _ := json.MarshalIndent(snode, "", " ")
+	
+	//file, _ := json.Marshal(node)
+	err = ioutil.WriteFile(fileName, file, 0644)
+	if err !=nil{
+		fmt.Println("failed to save file", err)
+	}
+	
+
+}
+
+func (node *Node) SaveNodeTwo(dirname string){
+	path :=filepath.Join(dirname, "node")
+	 //fmt.Println("Path ", path)
+	_, err := os.Stat(path)
+      
+	fileName := filepath.Join(path, "nodeTwo.json")
+	snode:=node.SNode()
+	file, _ := json.MarshalIndent(snode, "", " ")
+	
+	//file, _ := json.Marshal(node)
+	err = ioutil.WriteFile(fileName, file, 0644)
+	if err !=nil{
+		fmt.Println("failed to save file", err)
+	}
+	
 
 }

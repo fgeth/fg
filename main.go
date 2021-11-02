@@ -55,7 +55,7 @@ func init() {
 
 func main(){	
 	flag.Parse()
-	var common.Auth = auth
+	common.Auth = auth
 	var tmpNode node.Node
 	tmpNode.Id =uint64(0)
 	tmpNode.Ip =""
@@ -80,14 +80,15 @@ func main(){
 	finger = ring.FingerTable{Id : uint64(1), Node : NodeTwo()}
 	common.Ring.Table = append(common.Ring.Table, finger)
 
-	
+	fmt.Println("Node One Pub Key From Ring ", common.Ring.Table[0].Node.PKStr)
+	fmt.Println("Node Two Pub Key From Ring ", common.Ring.Table[1].Node.PKStr)
 	
 	
 	
 	if *Gen{
 		fmt.Println("Genesis Block")
 		common.FGValue = .01
-		common.CreateGenBlocks(0)
+		common.CreateGenBlocks()
 		common.MyNode.SaveNode(common.MyNode.Path)
 		//common.ImportTx()
 		//common.SignGenesisBlocks() 
@@ -336,7 +337,8 @@ func RegisterNode( ) {
 
 		if err != nil {
 			fmt.Println("Could not make POST request to ring trying port 80 if 42069 was banned by governments or ISPs")
-			If common.Ring.Table[x].Node.Port == ":42069"{
+			thePort := common.Ring.Table[x].Node.Port
+			if ( thePort == ":42069"){
 				url := "http://"+common.Ring.Table[x].Node.Ip+":80/newNode"
 				fmt.Println("Connecting to Ring at :", url)
 				resp, err := http.Post(url, "application/json", bytes.NewBuffer(nodeJson))
@@ -392,8 +394,8 @@ func createNewItem(w http.ResponseWriter, r *http.Request) {
 	prvKey := crypto.GenerateRSAKey()
 	pubKey := prvKey.PublicKey
 	theItem.Seller = pubKey
-	path := filepath.Join(common.MyNode.Path, "Keys", theItem.Id) 
-	crypto.StoreRSAKey(prvKey, "Password", path)
+	//path := filepath.Join(common.MyNode.Path, "Keys", theItem.Id) 
+	crypto.StoreRSAKey(prvKey, "Password", theItem.Id, common.MyNode.Path)
 	theItem.SaveItem(common.MyNode.Path)
 	
 	common.Wallet.Items.Item[theItem.Id] = theItem
@@ -581,6 +583,11 @@ func NodeTwo() node.Node{
 	var node node.Node
 	node.Port = ":42069"
 	node.Ip = "node2.fgeth.com"
+	node.PrvKey, _ = crypto.GenerateKey()
+	crypto.StoreKey ( node.PrvKey, auth, path)
+	node.PubKey = &node.PrvKey.PublicKey
+	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
+	node.SaveNodeTwo("/var/fg")
 	return node
 }
 
@@ -588,6 +595,11 @@ func NodeOne() node.Node{
 	var node node.Node
 	node.Port = ":42069"
 	node.Ip = "node1.fgeth.com"
+	node.PrvKey, _ = crypto.GenerateKey()
+	crypto.StoreKey ( node.PrvKey, auth, path)
+	node.PubKey = &node.PrvKey.PublicKey
+	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
+	node.SaveNodeOne("/var/fg")
 	return node
 }
 

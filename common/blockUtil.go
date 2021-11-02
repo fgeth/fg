@@ -3,6 +3,7 @@ package common
 import(
      "bytes"
 	 "fmt" 
+	 "crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
@@ -14,8 +15,8 @@ import(
 	 "time"
 	"github.com/fgeth/fg/block"
 	"github.com/fgeth/fg/crypto"
-	//"github.com/fgeth/fasthttp"
-	//"github.com/fgeth/fasthttp/fasthttpproxy"
+	"github.com/fgeth/fg/node"
+	"github.com/fgeth/fg/transaction"
 )
 
 
@@ -134,8 +135,16 @@ func GetBlocks(){
 
 }
 
+func GetWriters(nodes []uint64) []string{
+	var writers []string
+	for x:=0; x < len(nodes); x +=1{
+		writers = append(writers, Ring.Nodes[nodes[x]].PKStr)
+	}
+	return writers
+}
+
 func CreateBlock( ) block.Block{
-var block  block.Block
+var ablock  block.Block
 if MyNode.Leader{
 	blockNumber:= BlockNumber + uint64(1)
 	NumTxs := uint64(len(PTx))
@@ -213,33 +222,33 @@ if MyNode.Leader{
 		t := time.Now()
 		if uint64(t.Year())> ChainYear{
 			IncChainYear()
-			block.ChainYear = ChainYear
+			ablock.ChainYear = ChainYear
 		}
-		block.ChainYear = ChainYear
-		block.BlockNumber = blockNumber
-		block.FGValue = FGValue
-		block.Txs = blockTx
-		block.NumTxs = NumTxs
-		block.Nodes = ActiveNodes
-		block.PBHash = PB.BlockHash
-		block.NodePayout = NodeTx[0].Debit.Amount
-		block.WriterPayout = WritersTx[0].Debit.Amount
-		block.BlockHash = block.HashBlock()
+		ablock.ChainYear = ChainYear
+		ablock.BlockNumber = blockNumber
+		ablock.FGValue = FGValue
+		ablock.Txs = blockTx
+		ablock.NumTxs = NumTxs
+		//ablock.Nodes = ActiveNodes
+		ablock.PBHash = PB.BlockHash
+		ablock.NodePayout = NodeTx[0].Debit.Amount
+		ablock.WriterPayout = WritersTx[0].Debit.Amount
+		ablock.BlockHash = ablock.HashBlock()
 		if MultiBlock{
-			block.Writers = PB.Writers
+			ablock.Writers = PB.Writers
 			go trimPTx()
 		}else{
-			nodeVals := ElectNodes(block)
+			nodeVals := ElectNodes(ablock)
 			for x:=0; x < len(nodeVals); x +=1{
-				block.Writers = append(block.Writers, block.Nodes[nodeVals[x]])
+				ablock.Writers = append(ablock.Writers, Ring.Nodes[nodeVals[x]].PKStr)
 			}
 		}
 			
-		SwapBlocks(&block)
-		block.SaveBlock(MyNode.Path)
+		SwapBlocks(&ablock)
+		ablock.SaveBlock(MyNode.Path)
 	 
 	}
-	return block
+	return ablock
 }
 
 
@@ -259,7 +268,7 @@ func VerifyBlock(block *block.Block) bool{
 					}
 				}else{
 					
-					if CompareWriters(block.Writers, block.GetWriters(ElectNodes(*block))){
+					if CompareWriters(block.Writers, GetWriters(ElectNodes(*block))){
 						numNodes +=1
 					}
 				}
@@ -319,99 +328,108 @@ func ImportBlock(CB *block.Block) block.Block{
 }
 
 func CreateGenBlocks(){
-    common.ActiveNodes = append(common.ActiveNodes, common.MyNode.PKStr)
-	common.ChainYear = uint64(2021)
+    ActiveNodes = append(ActiveNodes, MyNode.PKStr)
+	ChainYear = uint64(2021)
 	BlockReward:= big.NewInt(0)
 	BlockReward.SetString("10000000000000000000000000", 10)
-	common.BlockNumber = uint64(0)
+	BlockNumber = uint64(0)
 	k,_:=crypto.GenerateKey()
-	crypto.StoreKey(k, common.Auth)
-	common.MyNode.PubKeys = append(common.MyNode.PubKeys, k.PublicKey)
-	common.MyNode.PrvtKeys = append(common.MyNode.PrvtKeys, k)
+	pubKey,_  := crypto.StoreKey(k, Auth, MyNode.Path)
+	MyNode.Addresses = append(MyNode.Addresses, pubKey)
+	MyNode.PubKeys = append(MyNode.PubKeys, &k.PublicKey)
+	MyNode.PrvtKeys = append(MyNode.PrvtKeys, k)
 	prvK, pubK := crypto.Encode(k,&k.PublicKey)
 	fmt.Println("Pvt Key:", prvK)
 	var keys  []*ecdsa.PrivateKey
 	keys = append(keys, k)
-	credit := common.CreateDebitTxs(BlockReward, pubK, common.BlockNumber)
+	credit := CreateDebitTxs(BlockReward, pubK, BlockNumber)
 	var credits []transaction.BaseTransaction
 	credits = append(credits, credit)
-	tx1 :=common.CreateTransaction(BlockReward, credits, pubK,pubK, common.BlockNumber, keys )
+	tx1 :=CreateTransaction(BlockReward, credits, pubK,pubK, BlockNumber, keys )
 	fmt.Println("Tx ", tx1)
-	tx1.SaveTx(common.MyNode.Path)
+	tx1.SaveTx(MyNode.Path)
 	k,_=crypto.GenerateKey()
-	crypto.StoreKey(k, common.Auth)
-	common.MyNode.PubKeys = append(common.MyNode.PubKeys, k.PublicKey)
-	common.MyNode.PrvtKeys = append(common.MyNode.PrvtKeys, k)
+	pubKey,_  = crypto.StoreKey(k, Auth, MyNode.Path)
+	MyNode.Addresses = append(MyNode.Addresses, pubKey)
+	MyNode.PubKeys = append(MyNode.PubKeys, &k.PublicKey)
+	MyNode.PrvtKeys = append(MyNode.PrvtKeys, k)
 	prvK, pubK = crypto.Encode(k,&k.PublicKey)
 	fmt.Println("Pvt Key:", prvK)
 	keys = append(keys, k)
-	credit2 := common.CreateDebitTxs(BlockReward, pubK, common.BlockNumber)
+	credit2 := CreateDebitTxs(BlockReward, pubK, BlockNumber)
 	var credits2 []transaction.BaseTransaction
 	credits2 = append(credits2, credit2)
-	tx2 :=common.CreateTransaction(BlockReward, credits2, pubK,pubK, common.BlockNumber, keys )
+	tx2 :=CreateTransaction(BlockReward, credits2, pubK,pubK, BlockNumber, keys )
 	fmt.Println("Tx ", tx2)
-	tx2.SaveTx(common.MyNode.Path)
+	tx2.SaveTx(MyNode.Path)
 	add := crypto.BytesToAddress([]byte(tx1.TxHash))
 	fmt.Println("Address :", add)
-	common.FGValue = float64(.01)
-	common.Wallet.FGs = common.Wei2FG(BlockReward)
-	common.Wallet.Wei = BlockReward
-	common.Wallet.Dollars = common.FG2USD(BlockReward)
-	var block block.Block
+	FGValue = float64(.01)
+	Wallet.FGs = Wei2FG(BlockReward)
+	Wallet.Wei = BlockReward
+	Wallet.Dollars = FG2USD(BlockReward)
+	var block0 block.Block
 	
-	block.BlockNumber = common.BlockNumber
-	block.ChainYear = common.ChainYear
-	block.FGValue = common.FGValue
-	block.Txs = append(block.Txs, tx1.TxHash)
-	block.Txs = append(block.Txs, tx2.TxHash)
-	block.NumTxs = uint64(len(block.Txs))
-	block.SignBlock
-	block. SaveBlock(common.MyNode.Path)
-	block.BlockNumber = uint64(1)
-		k,_:=crypto.GenerateKey()
-		crypto.StoreKey(k, common.Auth)
-		common.MyNode.PubKeys = append(common.MyNode.PubKeys, k.PublicKey)
-		common.MyNode.PrvtKeys = append(common.MyNode.PrvtKeys, k)
-	prvK, pubK := crypto.Encode(k,&k.PublicKey)
+	block0.BlockNumber = BlockNumber
+	block0.ChainYear = ChainYear
+	block0.FGValue = FGValue
+	block0.Txs = append(block0.Txs, tx1.TxHash)
+	block0.Txs = append(block0.Txs, tx2.TxHash)
+	block0.NumTxs = uint64(len(block0.Txs))
+	block0.Writers = append(block0.Writers, Ring.Table[0].Node.PKStr)
+	block0.Writers = append(block0.Writers, Ring.Table[1].Node.PKStr)
+	block0.SignBlock(MyNode.PrvKey)
+	block0. SaveBlock(MyNode.Path)
+	BlockNumber = uint64(1)
+		k,_=crypto.GenerateKey()
+		pubKey,_ =crypto.StoreKey(k, Auth, MyNode.Path)
+		MyNode.Addresses = append(MyNode.Addresses, pubKey)
+		MyNode.PubKeys = append(MyNode.PubKeys, &k.PublicKey)
+		MyNode.PrvtKeys = append(MyNode.PrvtKeys, k)
+	prvK, pubK = crypto.Encode(k,&k.PublicKey)
 	fmt.Println("Pvt Key:", prvK)
-	var keys  []*ecdsa.PrivateKey
+
 	keys = append(keys, k)
-	credit3 := common.CreateDebitTxs(BlockReward, pubK, common.BlockNumber)
+	credit3 := CreateDebitTxs(BlockReward, pubK, BlockNumber)
 	var credits3 []transaction.BaseTransaction
-	credits1 = append(credits3, credit3)
-	tx1 =common.CreateTransaction(BlockReward, credits3, pubK,pubK, common.BlockNumber, keys )
+	credits3 = append(credits3, credit3)
+	tx1 =CreateTransaction(BlockReward, credits3, pubK,pubK, BlockNumber, keys )
 	fmt.Println("Tx ", tx1)
-	tx1.SaveTx(common.MyNode.Path)
+	tx1.SaveTx(MyNode.Path)
 	k,_=crypto.GenerateKey()
-	crypto.StoreKey(k, common.Auth)
-	common.MyNode.PubKeys = append(common.MyNode.PubKeys, k.PublicKey)
-	common.MyNode.PrvtKeys = append(common.MyNode.PrvtKeys, k)
+	pubKey,_  =crypto.StoreKey(k, Auth, MyNode.Path)
+	MyNode.Addresses = append(MyNode.Addresses, pubKey)
+	MyNode.PubKeys = append(MyNode.PubKeys, &k.PublicKey)
+	MyNode.PrvtKeys = append(MyNode.PrvtKeys, k)
 	prvK, pubK = crypto.Encode(k,&k.PublicKey)
 	fmt.Println("Pvt Key:", prvK)
 	keys = append(keys, k)
-	credit4 := common.CreateDebitTxs(BlockReward, pubK, common.BlockNumber)
-
+	credit4 := CreateDebitTxs(BlockReward, pubK, BlockNumber)
+	var credits4 []transaction.BaseTransaction
 	credits4 = append(credits4, credit4)
-	tx2 =common.CreateTransaction(BlockReward, credits4, pubK,pubK, common.BlockNumber, keys )
+	tx2 =CreateTransaction(BlockReward, credits4, pubK,pubK, BlockNumber, keys )
 	fmt.Println("Tx ", tx2)
-	tx2.SaveTx(common.MyNode.Path)
+	tx2.SaveTx(MyNode.Path)
 	add = crypto.BytesToAddress([]byte(tx1.TxHash))
 	fmt.Println("Address :", add)
 	
-	common.Wallet.FGs = common.Wei2FG(BlockReward)
-	common.Wallet.Wei = BlockReward
-	common.Wallet.Dollars = common.FG2USD(BlockReward)
+	Wallet.FGs = Wei2FG(BlockReward)
+	Wallet.Wei = BlockReward
+	Wallet.Dollars = FG2USD(BlockReward)
 	var block1 block.Block
 	
-	block1.BlockNumber =common.BlockNumber
-	block1.ChainYear = common.ChainYear
-	block1.FGValue = common.FGValue
+	block1.BlockNumber =BlockNumber
+	block1.ChainYear = ChainYear
+	block1.FGValue = FGValue
 	block1.Txs = append(block1.Txs, tx1.TxHash)
 	block1.Txs = append(block1.Txs, tx2.TxHash)
 	block1.NumTxs = uint64(len(block1.Txs))
-	block1.SignBlock
-	block1. SaveBlock(common.MyNode.Path)
-	fmt.Println("PUBKey :", common.MyNode.PKStr)
-	common.Writers = append(common.Writers, common.MyNode.PKStr)
-	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
+	block1.PBHash = block0.BlockHash
+	block1.Writers = append(block1.Writers, Ring.Table[0].Node.PKStr)
+	block1.Writers = append(block1.Writers, Ring.Table[1].Node.PKStr)
+	block1.SignBlock(MyNode.PrvKey)
+	block1. SaveBlock(MyNode.Path)
+	fmt.Println("PUBKey :", MyNode.PKStr)
+	Writers = append(Writers, MyNode.PKStr)
+	TheNodes.Node = map[string]node.Node{MyNode.PKStr: MyNode}
 }

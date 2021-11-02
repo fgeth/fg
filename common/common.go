@@ -198,7 +198,7 @@ func genRsa() {
  clearText2 := crypto.RSADecrypt(secret2, prvKey)
  fmt.Println("Message =", clearText2)
  pk := prvKey
- err:= crypto.StoreRSAKey( pk ,"Pass", "Key1")
+ err:= crypto.StoreRSAKey( pk ,"Pass", "Key1", MyNode.Path)
  fmt.Println(err)
  pvKey, pbKey, err :=crypto.GetRSAKey("Key1", "Pass") //rsa.PrivateKey,rsa.PublicKey, error
  secret3 := crypto.RSAEncrypt("Secret3", pbKey)

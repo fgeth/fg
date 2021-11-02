@@ -2,6 +2,7 @@ package block
 
 import (
 	//"bytes"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"github.com/fgeth/fg/crypto"
 
 
+
 )
 
 type Block struct {
@@ -20,7 +22,7 @@ type Block struct {
 	FGValue				float64						//The Value of 1 FG
 	Txs			  		[]string					//Array of Transaction Hashes
 	NumTxs				uint64						//Number of Transactions Submited For this Block
-	Nodes				[]string					//This is current list of Nodes that responded to the last Block.  This array is what is used to determine Block Nodes. string is the nodes public key as a string
+	//Nodes				[]string					//This is current list of Nodes that responded to the last Block.  This array is what is used to determine Block Nodes. string is the nodes public key as a string
 	PBHash				string						//Hash of previous Block
 	BlockHash			string						//Hash of this Block which includes previous Blocks Hash & list of Nodes
 	Writers				[]string					//Array of the Next Block Nodes PublicKey as string Based on Block Hash includes Leader
@@ -35,7 +37,7 @@ type Block struct {
 type SignedBlock struct {
 	R			*big.Int
 	S			*big.Int
-	pubKey		*ecdsa.PublicKey
+	PubKey		string
 
 }
 
@@ -51,7 +53,7 @@ func (block *Block) GetUnsignedBlock() Block{
 	unsigned.FGValue = block.FGValue
 	unsigned.Txs = block.Txs
 	unsigned.NumTxs = block.NumTxs
-	unsigned.Nodes = block.Nodes
+	//unsigned.Nodes = block.Nodes
 	unsigned.NodePayout = block.NodePayout
 	unsigned.WriterPayout = block.WriterPayout
 	unsigned.BlockFailed = block.BlockFailed
@@ -73,10 +75,10 @@ func (block *Block) HashBlock() string{
 
 func (block Block) SignBlock(prvKey *ecdsa.PrivateKey ){
 	 var signature SignedBlock 
-	 blockHash := block.HashBlock()
-	signature.R, signature.S = TxSign([]byte(blockHash), prvKey)
-	signature.pubKey = &prvKey.PublicKey
-	block.signed = append(block.signed, signature)
+	block.BlockHash= block.HashBlock() 
+	signature.R, signature.S = crypto.TxSign([]byte(block.BlockHash), prvKey)
+	signature.PubKey = crypto.EncodePubKey(&prvKey.PublicKey)
+	block.Signed = append(block.Signed, signature)
 }
 func (block MinBlock) BlockHash() string{
 	//kh :=crypto.NewKeccakState()
@@ -143,13 +145,7 @@ func ImportBlock(chainYear uint64, blockNumber uint64, dirname string) Block{
 	return block
 }
 
-func (block *Block) GetWriters(nodes []uint64) []string{
-	var writers []string
-	for x:=0; x < len(nodes); x +=1{
-		writers = append(writers, block.Nodes[nodes[x]])
-	}
-	return writers
-}
+
 func (block *Block) VerifyBlock(PB *Block) bool{
 	return block.VerifyWriters(PB)
 
@@ -161,7 +157,7 @@ func (block *Block) VerifyWriters(PB *Block) bool{
 	NumWriters := len(PB.Writers)
 	for x:=0; x < NumWriters; x +=1{
 		for w:=0; w < NumWriters; w +=1{
-		if block.Signed[x].NodeId == PB.Writers[w]{
+		if block.Signed[x].PubKey == PB.Writers[w]{
 			if block.VerifySig(w){
 				Signed +=1
 			}
@@ -179,7 +175,7 @@ return false
 func (block *Block) VerifySig(index int) bool{
 
 	blockHash := block.HashBlock()
-	publicKey := crypto.DecodePubKey(block.Signed[index].NodeId)
+	publicKey := crypto.DecodePubKey(block.Signed[index].PubKey)
 	if block.BlockHash == blockHash{
 		return crypto.TxVerify([]byte(block.BlockHash), block.Signed[index].R, block.Signed[index].S, publicKey)
 	}else{
