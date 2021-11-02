@@ -26,6 +26,8 @@ type Node struct {
 	PRKStr			string							//Node PrivateKey as string	
 	Writer			bool							//True if a current Block Node 
 	Leader			bool							//True if the current Block Leader
+	PubKeys			[]*ecdsa.PublicKey				//Array of Public Keys
+	PrvtKeys		[]*ecdsa.PrivateKey				//Array of Private Keys
 	//Tor			string							//Port that Tor is running on
 	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
 	//Comms			Comm							//Node RSA Keys

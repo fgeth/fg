@@ -53,6 +53,7 @@ var (
 	Trusted				[]*ecdsa.PublicKey				//PublicKey of Fgeth Servers
 	Wallet				wallet.Wallet
 	Cookies         	[]*http.Cookie
+	Auth				string							//Password to protect Keys with
 )
 
 type Nodes struct {

@@ -35,7 +35,7 @@ type Block struct {
 type SignedBlock struct {
 	R			*big.Int
 	S			*big.Int
-	NodeId		string
+	pubKey		*ecdsa.PublicKey
 
 }
 
@@ -70,6 +70,14 @@ func (block *Block) HashBlock() string{
 	return blockHash
 }
 
+
+func (block Block) SignBlock(prvKey *ecdsa.PrivateKey ){
+	 var signature SignedBlock 
+	 blockHash := block.HashBlock()
+	signature.R, signature.S = TxSign([]byte(blockHash), prvKey)
+	signature.pubKey = &prvKey.PublicKey
+	block.signed = append(block.signed, signature)
+}
 func (block MinBlock) BlockHash() string{
 	//kh :=crypto.NewKeccakState()
 	

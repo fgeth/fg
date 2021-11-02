@@ -38,6 +38,7 @@ var (
 	path	  string
 	port 	  string
 	ipAddress string 		//Port Tor is running on
+	auth	  string
 	Gen		  *bool
 	
 	
@@ -47,19 +48,24 @@ func init() {
 			flag.StringVar(&port, "port", "42069", "Default Port")
 			flag.StringVar(&path, "path", "/var/fg", "Data Directory")
 			flag.StringVar(&ipAddress, "ip", "127.0.0.1", "Default Port")
+			flag.StringVar(&auth, "auth", "P@Ssw0Rd1", "Default Password")
 	Gen = 	flag.Bool("gen", false, "Continue with existing chain")
 	
 }
 
 func main(){	
 	flag.Parse()
-	common.MyNode.Id =uint64(0)
-	common.MyNode = node.ImportNode(path)
+	var common.Auth = auth
+	var tmpNode node.Node
+	tmpNode.Id =uint64(0)
+	tmpNode.Ip =""
+	tmpNode = node.ImportNode(path)
 	
-	if common.MyNode.Id ==0{
+	if tmpNode.Ip ==""{
 		common.MyNode = NewNode()
 
 	}else{
+		common.MyNode = tmpNode
 		if common.MyNode.PKStr !=""{
 			common.MyNode.PubKey = crypto.DecodePubKey(common.MyNode.PKStr)
 		}
@@ -81,8 +87,9 @@ func main(){
 	if *Gen{
 		fmt.Println("Genesis Block")
 		common.FGValue = .01
-		//common.ImportBlocks()
-		//common.ImportTxs()
+		common.CreateGenBlocks(0)
+		common.MyNode.SaveNode(common.MyNode.Path)
+		//common.ImportTx()
 		//common.SignGenesisBlocks() 
 	}else{
 		//RegisterNode()
@@ -165,39 +172,7 @@ func postTest(){
 }
 func test(){
 
-	common.ActiveNodes = append(common.ActiveNodes, common.MyNode.PKStr)
-	
-	BlockReward:= big.NewInt(0)
-	BlockReward.SetString("10000000000000000000", 10)
-	bn :=common.BlockNumber + uint64(1)
-	k,_:=crypto.GenerateKey()
-	prvK, pubK := crypto.Encode(k,&k.PublicKey)
-	fmt.Println("Pvt Key:", prvK)
-	var keys  []*ecdsa.PrivateKey
-	keys = append(keys, k)
-	credit := common.CreateDebitTxs(BlockReward, pubK, bn)
-	var credits []transaction.BaseTransaction
-	credits = append(credits, credit)
-	tx1 :=common.CreateTransaction(BlockReward, credits, pubK,pubK, bn, keys )
-	fmt.Println("Tx ", tx1)
-	tx1.SaveTx(common.MyNode.Path)
-	add := crypto.BytesToAddress([]byte(tx1.TxHash))
-	fmt.Println("Address :", add)
-	common.FGValue = .01
-	common.Wallet.FGs = common.Wei2FG(BlockReward)
-	common.Wallet.Wei = BlockReward
-	common.Wallet.Dollars = common.FG2USD(BlockReward)
-	var block block.Block
-	common.ChainYear = uint64(2021)
-	block.BlockNumber = uint64(0)
-	block.ChainYear = common.ChainYear
-	block.FGValue = float64(.01)
-	block.Txs = append(block.Txs, tx1.TxHash)
-	block.NumTxs = uint64(1)
-	block. SaveBlock(common.MyNode.Path)
-	fmt.Println("PUBKey :", common.MyNode.PKStr)
-	common.Writers = append(common.Writers, common.MyNode.PKStr)
-	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
+	common.CreateGenBlocks()
 	
 	//fmt.Println("Blocks :", common.Chain.Blocks[0])
 }

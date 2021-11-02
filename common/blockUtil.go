@@ -41,10 +41,7 @@ func ImportBlocks(blockNumber uint64) {
 	}
 
 }
-//TODO Sign Genesis block
-func SignGenesisBlocks(){
 
-}
 
 func i64tob(val uint64) []byte {
 	r := make([]byte, 8)
@@ -319,4 +316,102 @@ func CheckBlock(block *block.Block) bool{
 func ImportBlock(CB *block.Block) block.Block{
 	return block.ImportBlock(CB.ChainYear, CB.BlockNumber, MyNode.Path)
 
+}
+
+func CreateGenBlocks(){
+    common.ActiveNodes = append(common.ActiveNodes, common.MyNode.PKStr)
+	common.ChainYear = uint64(2021)
+	BlockReward:= big.NewInt(0)
+	BlockReward.SetString("10000000000000000000000000", 10)
+	common.BlockNumber = uint64(0)
+	k,_:=crypto.GenerateKey()
+	crypto.StoreKey(k, common.Auth)
+	common.MyNode.PubKeys = append(common.MyNode.PubKeys, k.PublicKey)
+	common.MyNode.PrvtKeys = append(common.MyNode.PrvtKeys, k)
+	prvK, pubK := crypto.Encode(k,&k.PublicKey)
+	fmt.Println("Pvt Key:", prvK)
+	var keys  []*ecdsa.PrivateKey
+	keys = append(keys, k)
+	credit := common.CreateDebitTxs(BlockReward, pubK, common.BlockNumber)
+	var credits []transaction.BaseTransaction
+	credits = append(credits, credit)
+	tx1 :=common.CreateTransaction(BlockReward, credits, pubK,pubK, common.BlockNumber, keys )
+	fmt.Println("Tx ", tx1)
+	tx1.SaveTx(common.MyNode.Path)
+	k,_=crypto.GenerateKey()
+	crypto.StoreKey(k, common.Auth)
+	common.MyNode.PubKeys = append(common.MyNode.PubKeys, k.PublicKey)
+	common.MyNode.PrvtKeys = append(common.MyNode.PrvtKeys, k)
+	prvK, pubK = crypto.Encode(k,&k.PublicKey)
+	fmt.Println("Pvt Key:", prvK)
+	keys = append(keys, k)
+	credit2 := common.CreateDebitTxs(BlockReward, pubK, common.BlockNumber)
+	var credits2 []transaction.BaseTransaction
+	credits2 = append(credits2, credit2)
+	tx2 :=common.CreateTransaction(BlockReward, credits2, pubK,pubK, common.BlockNumber, keys )
+	fmt.Println("Tx ", tx2)
+	tx2.SaveTx(common.MyNode.Path)
+	add := crypto.BytesToAddress([]byte(tx1.TxHash))
+	fmt.Println("Address :", add)
+	common.FGValue = float64(.01)
+	common.Wallet.FGs = common.Wei2FG(BlockReward)
+	common.Wallet.Wei = BlockReward
+	common.Wallet.Dollars = common.FG2USD(BlockReward)
+	var block block.Block
+	
+	block.BlockNumber = common.BlockNumber
+	block.ChainYear = common.ChainYear
+	block.FGValue = common.FGValue
+	block.Txs = append(block.Txs, tx1.TxHash)
+	block.Txs = append(block.Txs, tx2.TxHash)
+	block.NumTxs = uint64(len(block.Txs))
+	block.SignBlock
+	block. SaveBlock(common.MyNode.Path)
+	block.BlockNumber = uint64(1)
+		k,_:=crypto.GenerateKey()
+		crypto.StoreKey(k, common.Auth)
+		common.MyNode.PubKeys = append(common.MyNode.PubKeys, k.PublicKey)
+		common.MyNode.PrvtKeys = append(common.MyNode.PrvtKeys, k)
+	prvK, pubK := crypto.Encode(k,&k.PublicKey)
+	fmt.Println("Pvt Key:", prvK)
+	var keys  []*ecdsa.PrivateKey
+	keys = append(keys, k)
+	credit3 := common.CreateDebitTxs(BlockReward, pubK, common.BlockNumber)
+	var credits3 []transaction.BaseTransaction
+	credits1 = append(credits3, credit3)
+	tx1 =common.CreateTransaction(BlockReward, credits3, pubK,pubK, common.BlockNumber, keys )
+	fmt.Println("Tx ", tx1)
+	tx1.SaveTx(common.MyNode.Path)
+	k,_=crypto.GenerateKey()
+	crypto.StoreKey(k, common.Auth)
+	common.MyNode.PubKeys = append(common.MyNode.PubKeys, k.PublicKey)
+	common.MyNode.PrvtKeys = append(common.MyNode.PrvtKeys, k)
+	prvK, pubK = crypto.Encode(k,&k.PublicKey)
+	fmt.Println("Pvt Key:", prvK)
+	keys = append(keys, k)
+	credit4 := common.CreateDebitTxs(BlockReward, pubK, common.BlockNumber)
+
+	credits4 = append(credits4, credit4)
+	tx2 =common.CreateTransaction(BlockReward, credits4, pubK,pubK, common.BlockNumber, keys )
+	fmt.Println("Tx ", tx2)
+	tx2.SaveTx(common.MyNode.Path)
+	add = crypto.BytesToAddress([]byte(tx1.TxHash))
+	fmt.Println("Address :", add)
+	
+	common.Wallet.FGs = common.Wei2FG(BlockReward)
+	common.Wallet.Wei = BlockReward
+	common.Wallet.Dollars = common.FG2USD(BlockReward)
+	var block1 block.Block
+	
+	block1.BlockNumber =common.BlockNumber
+	block1.ChainYear = common.ChainYear
+	block1.FGValue = common.FGValue
+	block1.Txs = append(block1.Txs, tx1.TxHash)
+	block1.Txs = append(block1.Txs, tx2.TxHash)
+	block1.NumTxs = uint64(len(block1.Txs))
+	block1.SignBlock
+	block1. SaveBlock(common.MyNode.Path)
+	fmt.Println("PUBKey :", common.MyNode.PKStr)
+	common.Writers = append(common.Writers, common.MyNode.PKStr)
+	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
 }

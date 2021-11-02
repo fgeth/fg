@@ -174,19 +174,13 @@ return false
 
 
 //TODO fix where this imports the transactions
-func ImportTxs() {
+func ImportTx(txHash string) {
 	//dirname, err := os.UserHomeDir()
     //if err != nil {
     //   fmt.Println( err )
     //}
-	var txHash crypto.Hash
-	uintA, uintB, uintC, uintD := crypto.HashToUint64(txHash)
-	h1 := strconv.FormatUint(uintA, 10)
-	h2 := strconv.FormatUint(uintB, 10)
-	h3 := strconv.FormatUint(uintC, 10)
-	h4 := strconv.FormatUint(uintD, 10)
-	theHash := h1 + h2 +h3 +h4
-	path :=filepath.Join(MyNode.Path, "tx", theHash )
+	
+	path :=filepath.Join(MyNode.Path, "tx", txHash )
 	file, _ := ioutil.ReadFile(path)
 	var tx transaction.Transaction
 	_ = json.Unmarshal([]byte(file), &tx)
