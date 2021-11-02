@@ -360,7 +360,28 @@ func RegisterNode( ) {
 		resp, err := http.Post(url, "application/json", bytes.NewBuffer(nodeJson))
 
 		if err != nil {
-			fmt.Println("Could not make POST request to ring")
+			fmt.Println("Could not make POST request to ring trying port 80 if 42069 was banned by governments or ISPs")
+			If common.Ring.Table[x].Node.Port == ":42069"{
+				url := "http://"+common.Ring.Table[x].Node.Ip+":80/newNode"
+				fmt.Println("Connecting to Ring at :", url)
+				resp, err := http.Post(url, "application/json", bytes.NewBuffer(nodeJson))
+				if err != nil {
+					fmt.Println("Could not make POST request to ring")
+				}else{
+					body, err := ioutil.ReadAll(resp.Body)
+
+					var result node.Node
+					err = json.Unmarshal([]byte(body), &result)
+					if err != nil {
+						fmt.Println("Error unmarshaling data from request.")
+					}else{
+						common.MyNode.Id = result.Id
+						common.Ring.Id = result.Id
+						fmt.Println(" Registered Node Id: ", common.MyNode.Id)
+						break
+					}
+				}
+			}
 		}else{
 
 			body, err := ioutil.ReadAll(resp.Body)
@@ -583,15 +604,15 @@ func NewNode() node.Node{
 
 func NodeTwo() node.Node{
 	var node node.Node
-	node.Port = ":"+port
-	node.Ip = "3.18.255.36"
+	node.Port = ":42069"
+	node.Ip = "node2.fgeth.com"
 	return node
 }
 
 func NodeOne() node.Node{
 	var node node.Node
-	node.Port = ":"+port
-	node.Ip = "18.188.246.213"
+	node.Port = ":42069"
+	node.Ip = "node1.fgeth.com"
 	return node
 }
 
