@@ -3,7 +3,7 @@ package node
 
 
 import (
-	"crypto/rsa"
+	//"crypto/rsa"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -23,13 +23,11 @@ type Node struct {
 	PubKey			*ecdsa.PublicKey				//Nodes Public Key
 	PKStr			string							//Node PublicKey as string	
 	PrvKey			*ecdsa.PrivateKey				//Nodes Private Key
-	Address			string							//File Name for Password Protected Stored Private Key
 	PRKStr			string							//Node PrivateKey as string	
+	Address			string							//File Name for Password Protected Stored Private Key
 	Writer			bool							//True if a current Block Node 
 	Leader			bool							//True if the current Block Leader
-	Addresses		[]string						//Array of Public Keys as Addresses
-	PubKeys			[]*ecdsa.PublicKey				//Array of Public Keys
-	PrvtKeys		[]*ecdsa.PrivateKey				//Array of Private Keys
+	Keys			Key								//Array of Private Keys as Addresses
 	Comms			Comm							//Node RSA Keys
 	
 	
@@ -39,11 +37,25 @@ type SNode struct {
 	Id				uint64							//Node Ring Location
 	Ip				string							//Node Onion Address
 	Port			string							//Port that the node is running under
+	Path			string							//Path to save data to
 	PKStr			string							//Node PublicKey as string	
+	PRKStr			string							//Node PrivateKey as string	
 	Address			string							//File Name for Password Protected Stored Private Key	
 	
 }
 
+
+//Public Node with IP
+type PNode struct {
+	Id				uint64							//Node Ring Location
+	Ip				string							//Node Onion Address
+	Port			string							//Port that the node is running under
+	PKStr			string							//Node PublicKey as string	
+
+	
+}
+
+//Ring Node without IP
 type RNode struct {
 	Id				uint64							//Node Public Key as a uint64
 	PKStr			string							//Node PublicKey as string	
@@ -51,30 +63,52 @@ type RNode struct {
 	
 }
 
+type Key struct {
 
+	Key 		[]string	//Array of Addresses which is the file location of the Private Keys
+}
 
 type Comm struct{
 
-	RsaPrvKeys		map[rsa.PublicKey]rsa.PrivateKey	//index is the RSA publicKey
+	Rsa			[]string	//Array of Addresses which is the file location of the Private Keys
 
 	
 }
-
+//Node that can be saved to file
 func (node *Node) SNode() SNode{
 	var snode SNode
 		snode.Id =node.Id
 		snode.Ip = node.Ip
 		snode.Port = node.Port
+		snode.Path = node.Path
 		snode.PKStr = node.PKStr
+		snode.PRKStr = node.PRKStr
+		snode.Address = node.Address
 		return snode
 }
+
+//From Saved File to Node
 func (snode *SNode) Node() Node{
 	var node Node
 		node.Id=snode.Id
 		node.Ip = snode.Ip
 		node.Port = snode.Port
+		node.Path = snode.Path
 		node.PKStr = snode.PKStr
+		node.PRKStr = snode.PRKStr
+		node.Address = snode.Address
 		return node
+}
+
+//Public Node
+func (node *Node) PNode() PNode{
+	var pnode PNode
+		pnode.Id =node.Id
+		pnode.Ip = node.Ip
+		pnode.Port = node.Port
+		pnode.PKStr = node.PKStr
+
+		return pnode
 }
 
 func (node *Node) SaveNode(dirname string){
@@ -110,8 +144,8 @@ func (node *Node) SaveNode(dirname string){
     }
   
 	fileName := filepath.Join(path, "node.json")
-	//snode:=node.SNode()
-	file, err := json.MarshalIndent(node, "", " ")
+	snode:=node.SNode()
+	file, err := json.MarshalIndent(snode, "", " ")
 	if err !=nil{
 		fmt.Println("Error Marshalling Node :", err)
 	}

@@ -121,8 +121,8 @@ func(r Ring) RotateKeys(n node.RNode){
 
 }
 
-func (r Ring) RotateFingerTable(n node.SNode, ringId uint64){
-	var tmpNode  node.SNode
+func (r Ring) RotateFingerTable(n node.PNode, ringId uint64){
+	var tmpNode  node.PNode
 	ft := len(r.Table)
 	if ft <32 || (n.Id >= ringId && n.Id <= ringId +uint64(8)){
 		for x:=0; x< ft; x +=1{
@@ -148,8 +148,8 @@ func (r Ring) RotateFingerTable(n node.SNode, ringId uint64){
 
 
 
-func(r Ring) FindPeer() node.SNode{
-var result node.SNode
+func(r Ring) FindPeer() node.PNode{
+var result node.PNode
 var theUrl =""
 x:=0;
 	for a:=3; a<256; a +=1{
@@ -207,7 +207,7 @@ x:=0;
 
 
 func (r Ring) CheckPeer42069(theUrl, a, b, c, d string){
-var result node.SNode
+var result node.PNode
 var finger FingerTable
 var Mtx	sync.Mutex
 		url :=theUrl +":42069/getPeer"
@@ -237,7 +237,7 @@ var Mtx	sync.Mutex
 }
 
 func (r Ring) CheckPeer80(theUrl, a, b, c, d string){
-var result node.SNode
+var result node.PNode
 var finger FingerTable
 var Mtx	sync.Mutex
 		theUrl = theUrl+":80/getPeer"

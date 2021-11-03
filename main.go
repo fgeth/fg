@@ -84,6 +84,8 @@ func main(){
 				common.MyNode.PubKey = &common.MyNode.PrvKey.PublicKey
 				common.MyNode.PRKStr, common.MyNode.PKStr  = crypto.Encode(common.MyNode.PrvKey, common.MyNode.PubKey)
 				common.MyNode.Address, _ = crypto.StoreKey( common.MyNode.PrvKey, auth, path)
+			}else{
+				fmt.Println("Private Key Added from saved Node Key File")
 			}
 		}
 	}
@@ -96,9 +98,13 @@ func main(){
 	tmpRing, err := ring.ImportRing(common.MyNode.Path)
 	if err != nil{
 		common.Ring = NewRing()
-		finger := ring.FingerTable{Id : uint64(0), Node: NodeOne()}
+		sn1 := NodeOne()
+		sn2 := NodeTwo()
+		n1 := sn1.Node()
+		n2 := sn2.Node()
+		finger := ring.FingerTable{Id : uint64(0), Node: n1.PNode()}
 		common.Ring.Table = append(common.Ring.Table, finger)
-		finger = ring.FingerTable{Id : uint64(1), Node : NodeTwo()}
+		finger = ring.FingerTable{Id : uint64(1), Node : n2.PNode()}
 		common.Ring.Table = append(common.Ring.Table, finger)
 
 		fmt.Println("Node One Pub Key From Ring ", common.Ring.Table[0].Node.PKStr)
@@ -339,7 +345,7 @@ func sendBlock(w http.ResponseWriter, r *http.Request){
 
 func newNode(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
-    var theNode node.SNode
+    var theNode node.PNode
     json.Unmarshal(reqBody, &theNode)
 	var rnode node.RNode
 	rnode.Id,_,_,_ = crypto.B32HashToUint64([]byte(crypto.HashTx([]byte(theNode.PKStr))))
@@ -351,7 +357,7 @@ func newNode(w http.ResponseWriter, r *http.Request) {
 }
 
 func RegisterNode( ) {
-	nodeJson, _ := json.Marshal(common.MyNode)
+	nodeJson, _ := json.Marshal(common.MyNode.PNode())
 	for x:=0; x < len(common.Ring.Table); x +=1{
 		url := "http://"+common.Ring.Table[x].Node.Ip+common.Ring.Table[x].Node.Port+"/newNode"
 		fmt.Println("Connecting to Ring at :", url)
@@ -514,7 +520,7 @@ func GetWallet(w http.ResponseWriter, r *http.Request){
 func GetPeer(w http.ResponseWriter, r *http.Request){
 	
 
-	json.NewEncoder(w).Encode(common.MyNode)
+	json.NewEncoder(w).Encode(common.MyNode.PNode())
 }
 //TODO Fix this
 func register() bool{
