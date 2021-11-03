@@ -115,3 +115,17 @@ func SelectNode(tx transaction.Transaction) []uint64{
 			}
 	return blockNode
 }
+//TODO This is to downloand Blocks that this node is responsible for
+func GetNodeBlocks(){
+	
+}
+
+//TODO This is to downloand Transactions that this node is responsible for
+func GetNodeTransactions(){
+	
+}
+
+//TODO This is to downloand Items that this node is responsible for
+func GetNodeItems(){
+	
+}

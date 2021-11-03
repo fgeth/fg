@@ -1,0 +1,24 @@
+{
+ "Id": 0,
+ "Table": [
+  {
+   "Id": 0,
+   "Node": {
+    "Id": 0,
+    "Ip": "node1.fgeth.com",
+    "Port": ":42069",
+    "PKStr": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEL5DJq6PqPt1DIa3UOjM+7wx4L/36\nePWcZlwhY+JIkuEQ4fKCyevjdaBbKws/K7i/pissjpSEbLlDpeJ+5iBh1w==\n-----END PUBLIC KEY-----\n"
+   }
+  },
+  {
+   "Id": 1,
+   "Node": {
+    "Id": 0,
+    "Ip": "node2.fgeth.com",
+    "Port": ":42069",
+    "PKStr": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE4K0+1vnAs0xOEZ9iFI2EP+qDEgMY\n+G6DNbAx+gCl+HCun8ustx1fq3xpgVMFnITXC1x2xAYz8isqlX/6bOFzfg==\n-----END PUBLIC KEY-----\n"
+   }
+  }
+ ],
+ "Nodes": null
+}

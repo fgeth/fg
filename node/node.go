@@ -23,15 +23,14 @@ type Node struct {
 	PubKey			*ecdsa.PublicKey				//Nodes Public Key
 	PKStr			string							//Node PublicKey as string	
 	PrvKey			*ecdsa.PrivateKey				//Nodes Private Key
+	Address			string							//File Name for Password Protected Stored Private Key
 	PRKStr			string							//Node PrivateKey as string	
 	Writer			bool							//True if a current Block Node 
 	Leader			bool							//True if the current Block Leader
 	Addresses		[]string						//Array of Public Keys as Addresses
 	PubKeys			[]*ecdsa.PublicKey				//Array of Public Keys
 	PrvtKeys		[]*ecdsa.PrivateKey				//Array of Private Keys
-	//Tor			string							//Port that Tor is running on
-	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
-	//Comms			Comm							//Node RSA Keys
+	Comms			Comm							//Node RSA Keys
 	
 	
 }
@@ -40,15 +39,8 @@ type SNode struct {
 	Id				uint64							//Node Ring Location
 	Ip				string							//Node Onion Address
 	Port			string							//Port that the node is running under
-	Path			string							//Path to save data to
 	PKStr			string							//Node PublicKey as string	
-	PRKStr			string							//Node PrivateKey as string	
-	Writer			bool							//True if a current Block Node 
-	Leader			bool							//True if the current Block Leader
-	//Tor			string							//Port that Tor is running on
-	//NumNodes		uint32							//Tracks Number of Block nodes that have submited Txs
-	//Comms			Comm							//Node RSA Keys
-	
+	Address			string							//File Name for Password Protected Stored Private Key	
 	
 }
 
@@ -72,26 +64,16 @@ func (node *Node) SNode() SNode{
 	var snode SNode
 		snode.Id =node.Id
 		snode.Ip = node.Ip
-		//snode.Tor= node.Tor
 		snode.Port = node.Port
-		snode.Path = node.Path
 		snode.PKStr = node.PKStr
-		snode.PRKStr = node.PRKStr
-		snode.Writer = node.Writer
-		snode.Leader = node.Leader
 		return snode
 }
 func (snode *SNode) Node() Node{
 	var node Node
 		node.Id=snode.Id
 		node.Ip = snode.Ip
-		//node.Tor = snode.Tor
 		node.Port = snode.Port
-		node.Path = snode.Path
 		node.PKStr = snode.PKStr
-		node.PRKStr = snode.PRKStr
-		node.Writer = snode.Writer
-		node.Leader = snode.Leader
 		return node
 }
 
@@ -128,9 +110,12 @@ func (node *Node) SaveNode(dirname string){
     }
   
 	fileName := filepath.Join(path, "node.json")
-	snode:=node.SNode()
-	file, _ := json.MarshalIndent(snode, "", " ")
-	
+	//snode:=node.SNode()
+	file, err := json.MarshalIndent(node, "", " ")
+	if err !=nil{
+		fmt.Println("Error Marshalling Node :", err)
+	}
+	fmt.Println("The Node Marshalled: ", file)
 	//file, _ := json.Marshal(node)
 	err = ioutil.WriteFile(fileName, file, 0644)
 	if err !=nil{
@@ -140,11 +125,11 @@ func (node *Node) SaveNode(dirname string){
 
 }
 
-func ImportNode(dirname string) Node{
+func ImportNode(dirname string) (Node, error){
 	
 	
 	var snode SNode
-    
+    var errNode Node
    //fmt.Println( dirname )
 	path :=filepath.Join(dirname, "node")
 
@@ -159,7 +144,8 @@ func ImportNode(dirname string) Node{
 		_, e1 := os.Stat(fileName)
 		
 		if e1 != nil{
-			fmt.Println( e1 )
+			return errNode, e1
+			
 		}else{
 			file, _ := ioutil.ReadFile(fileName)
 			//fmt.Println("Unmarshalling File : ", fileName )
@@ -167,7 +153,7 @@ func ImportNode(dirname string) Node{
 			
 			if err != nil {
 				fmt.Println("couldn't unmarshal parameters", err)
-	
+				return errNode, err
 
 			}
 		}
@@ -180,7 +166,7 @@ func ImportNode(dirname string) Node{
 		//fmt.Println("Unmarshalling File : ", fileName )
 	if err != nil {
         fmt.Println("couldn't unmarshal parameters", err)
-
+			return errNode, err
     }
 	}
 		node :=snode.Node()
@@ -190,7 +176,7 @@ func ImportNode(dirname string) Node{
 	if node.PRKStr !=""{
 		node.PrvKey, node.PubKey  = crypto.Decode(node.PRKStr, node.PKStr)
 		}
-	return node
+	return node, nil
 	
 }
 
@@ -202,16 +188,15 @@ func (node *Node) RegisterNode(PubKey string){
 
 }
 
-func (node *Node) SaveNodeOne(dirname string){
+func (node *SNode) SaveNodeOne(dirname string){
 	path :=filepath.Join(dirname, "node")
 	 //fmt.Println("Path ", path)
 	_, err := os.Stat(path)
     
 	fileName := filepath.Join(path, "nodeOne.json")
-	snode:=node.SNode()
-	file, _ := json.MarshalIndent(snode, "", " ")
 	
-	//file, _ := json.Marshal(node)
+	file, _ := json.MarshalIndent(node, "", " ")
+	
 	err = ioutil.WriteFile(fileName, file, 0644)
 	if err !=nil{
 		fmt.Println("failed to save file", err)
@@ -220,16 +205,15 @@ func (node *Node) SaveNodeOne(dirname string){
 
 }
 
-func (node *Node) SaveNodeTwo(dirname string){
+func (node *SNode) SaveNodeTwo(dirname string){
 	path :=filepath.Join(dirname, "node")
 	 //fmt.Println("Path ", path)
 	_, err := os.Stat(path)
       
 	fileName := filepath.Join(path, "nodeTwo.json")
-	snode:=node.SNode()
-	file, _ := json.MarshalIndent(snode, "", " ")
-	
-	//file, _ := json.Marshal(node)
+
+	file, _ := json.MarshalIndent(node, "", " ")
+
 	err = ioutil.WriteFile(fileName, file, 0644)
 	if err !=nil{
 		fmt.Println("failed to save file", err)

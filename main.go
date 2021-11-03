@@ -59,37 +59,61 @@ func main(){
 	var tmpNode node.Node
 	tmpNode.Id =uint64(0)
 	tmpNode.Ip =""
-	tmpNode = node.ImportNode(path)
+	tmpNode, err := node.ImportNode(path)
 	
-	if tmpNode.Ip ==""{
+	if err !=nil{
 		common.MyNode = NewNode()
 
 	}else{
+		fmt.Println("Found Node", tmpNode)
 		common.MyNode = tmpNode
-		if common.MyNode.PKStr !=""{
-			common.MyNode.PubKey = crypto.DecodePubKey(common.MyNode.PKStr)
-		}
+		
 		if common.MyNode.PRKStr !=""{
 			common.MyNode.PrvKey = crypto.DecodePrv(common.MyNode.PRKStr)
+			fmt.Println("Private Key Added from saved Node")
+			if common.MyNode.PKStr !=""{
+				common.MyNode.PubKey = crypto.DecodePubKey(common.MyNode.PKStr)
+				fmt.Println("Public Key Added from saved Node")
+			}
+		}else{
+			fmt.Println("Error Getting Private Key")
+			common.MyNode.PrvKey, common.MyNode.PubKey, err =crypto.GetKey(common.MyNode.Address, auth)
+			if err !=nil{
+				fmt.Println("Error Recovering Keys Generating new Keys")
+				common.MyNode.PrvKey, _ = crypto.GenerateKey()
+				common.MyNode.PubKey = &common.MyNode.PrvKey.PublicKey
+				common.MyNode.PRKStr, common.MyNode.PKStr  = crypto.Encode(common.MyNode.PrvKey, common.MyNode.PubKey)
+				common.MyNode.Address, _ = crypto.StoreKey( common.MyNode.PrvKey, auth, path)
+			}
 		}
 	}
+		fmt.Println("Node Id is :" , common.MyNode.Id)
+		fmt.Println("Node Ip is :" , common.MyNode.Ip)
+		fmt.Println("Node Address is :" , common.MyNode.Address)
+		fmt.Println("Node Path is :" , common.MyNode.Path)
+	common.MyNode.SaveNode(common.MyNode.Path)
 	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
-	common.Ring = NewRing()
-	finger := ring.FingerTable{Id : uint64(0), Node: NodeOne()}
-	common.Ring.Table = append(common.Ring.Table, finger)
-	finger = ring.FingerTable{Id : uint64(1), Node : NodeTwo()}
-	common.Ring.Table = append(common.Ring.Table, finger)
+	tmpRing, err := ring.ImportRing(common.MyNode.Path)
+	if err != nil{
+		common.Ring = NewRing()
+		finger := ring.FingerTable{Id : uint64(0), Node: NodeOne()}
+		common.Ring.Table = append(common.Ring.Table, finger)
+		finger = ring.FingerTable{Id : uint64(1), Node : NodeTwo()}
+		common.Ring.Table = append(common.Ring.Table, finger)
 
-	fmt.Println("Node One Pub Key From Ring ", common.Ring.Table[0].Node.PKStr)
-	fmt.Println("Node Two Pub Key From Ring ", common.Ring.Table[1].Node.PKStr)
-	
+		fmt.Println("Node One Pub Key From Ring ", common.Ring.Table[0].Node.PKStr)
+		fmt.Println("Node Two Pub Key From Ring ", common.Ring.Table[1].Node.PKStr)
+		common.Ring.SaveRing(common.MyNode.Path)
+	}else{
+		common.Ring = tmpRing
+	}
 	
 	
 	if *Gen{
 		fmt.Println("Genesis Block")
 		common.FGValue = .01
 		common.CreateGenBlocks()
-		common.MyNode.SaveNode(common.MyNode.Path)
+		
 		//common.ImportTx()
 		//common.SignGenesisBlocks() 
 	}else{
@@ -111,10 +135,8 @@ func main(){
 	
 		directory()
 		wallet()
-		common.MyNode.SaveNode(common.MyNode.Path)
-		fmt.Println("Node Id is :" , common.MyNode.Id)
-		fmt.Println("Node Ip is :" , common.MyNode.Ip)
-		fmt.Println("Node Path is :" , common.MyNode.Path)
+		
+		
 		test()
 		//common.ImportBlocks()
 		//common.ImportTxs()
@@ -317,13 +339,13 @@ func sendBlock(w http.ResponseWriter, r *http.Request){
 
 func newNode(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
-    var theNode node.Node
+    var theNode node.SNode
     json.Unmarshal(reqBody, &theNode)
 	var rnode node.RNode
 	rnode.Id,_,_,_ = crypto.B32HashToUint64([]byte(crypto.HashTx([]byte(theNode.PKStr))))
 	rnode.PKStr = theNode.PKStr
 	common.Ring.RotateKeys(rnode)
-	common.Ring.RotateFingerTable(theNode)
+	common.Ring.RotateFingerTable(theNode, common.MyNode.Id)
 	json.NewEncoder(w).Encode(theNode)
 	
 }
@@ -569,6 +591,8 @@ func NewNode() node.Node{
 	node.PrvKey, _ = crypto.GenerateKey()
 	node.PubKey = &node.PrvKey.PublicKey
 	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
+	node.Address, _ = crypto.StoreKey( node.PrvKey, auth, path)
+	fmt.Println("Node Prvt Key File : ", node.Address)
 	node.Port = ":"+port
 	node.Path = path
 	fmt.Println("Ip Address:", ipAddress)
@@ -579,26 +603,24 @@ func NewNode() node.Node{
 }
 
 
-func NodeTwo() node.Node{
-	var node node.Node
+func NodeTwo() node.SNode{
+	var node node.SNode
 	node.Port = ":42069"
 	node.Ip = "node2.fgeth.com"
-	node.PrvKey, _ = crypto.GenerateKey()
-	crypto.StoreKey ( node.PrvKey, auth, path)
-	node.PubKey = &node.PrvKey.PublicKey
-	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
+	PrvKey, _ := crypto.GenerateKey()
+	node.Address, _ =crypto.StoreKey(PrvKey, auth, path)
+	node.PKStr  = crypto.EncodePubKey(&PrvKey.PublicKey)
 	node.SaveNodeTwo("/var/fg")
 	return node
 }
 
-func NodeOne() node.Node{
-	var node node.Node
+func NodeOne() node.SNode{
+	var node node.SNode
 	node.Port = ":42069"
 	node.Ip = "node1.fgeth.com"
-	node.PrvKey, _ = crypto.GenerateKey()
-	crypto.StoreKey ( node.PrvKey, auth, path)
-	node.PubKey = &node.PrvKey.PublicKey
-	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
+	PrvKey, _ := crypto.GenerateKey()
+	node.Address, _ =crypto.StoreKey ( PrvKey, auth, path)
+	node.PKStr  = crypto.EncodePubKey(&PrvKey.PublicKey)
 	node.SaveNodeOne("/var/fg")
 	return node
 }

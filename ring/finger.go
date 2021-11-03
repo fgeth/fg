@@ -8,7 +8,7 @@ import (
 
 type FingerTable struct {
 	Id			uint64			//Location on the ring
-	Node		node.Node		//The Node
+	Node		node.SNode		//The Node
 	
 }
 

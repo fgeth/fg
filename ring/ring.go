@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"strconv"
 	"time"
@@ -18,9 +20,87 @@ type Ring struct{
 	Nodes	[]node.RNode		    //Index is location on Ring and the nodes corresponding Public Key 
 	
 }
+func(r Ring) SaveRing (dirname string) {
+	path :=filepath.Join(dirname, "ring")
 
+	_, err := os.Stat(dirname)
+    if err !=nil {
+		fmt.Println("error ", err)
+		err := os.Mkdir(dirname, 0755)
+		if err !=nil{
+			fmt.Println("failed to make root directory. Can not save Ring.", err)
+				
+			}else{
+				err = os.Mkdir(path, 0755)
+				if err !=nil{
+					fmt.Println("failed to make ring directory", err)
+				}
+			}
+			
+		}else{
+			err = os.Mkdir(path, 0755)
+			if err !=nil{
+				fmt.Println("failed to make ring directory", err)
+			}
+		}
 
+    
+  
+	fileName := filepath.Join(path, "ring.json")
+	
+	file, _ := json.MarshalIndent(r, "", " ")
+	
+	
+	err = ioutil.WriteFile(fileName, file, 0644)
+	if err !=nil{
+		fmt.Println("failed to save file", err)
+	}
+}	
+func ImportRing(dirname string ) (Ring, error){
 
+	path :=filepath.Join(dirname, "ring")
+	var ring Ring
+	var errRing Ring
+	fileName := filepath.Join(path, "ring.json")
+	//fmt.Println("File Name : ", fileName )
+	_, e := os.Stat(fileName)
+	if e != nil{
+		dirname, _ := os.UserHomeDir()
+		path :=filepath.Join(dirname, "ring")
+		fileName := filepath.Join(path, "ring.json")
+		//fmt.Println("File Name : ", fileName )
+		_, e1 := os.Stat(fileName)
+		
+		if e1 != nil{
+			return errRing, e1
+			
+		}else{
+			file, _ := ioutil.ReadFile(fileName)
+			//fmt.Println("Unmarshalling File : ", fileName )
+			err :=json.Unmarshal(file, &ring)
+			
+			if err != nil {
+				fmt.Println("couldn't unmarshal parameters", err)
+				return errRing, err
+
+			}
+		}
+		
+		//fmt.Println( e )
+	}else{
+		file, _ := ioutil.ReadFile(fileName)
+		
+		err := json.Unmarshal(file, &ring)
+		//fmt.Println("Unmarshalling File : ", fileName )
+	if err != nil {
+        fmt.Println("couldn't unmarshal parameters", err)
+			return errRing, err
+    }
+		return ring, nil
+	}
+
+	return errRing, e
+}
 
 func(r Ring) RotateKeys(n node.RNode){
 	var tmpNode  node.RNode
@@ -41,10 +121,11 @@ func(r Ring) RotateKeys(n node.RNode){
 
 }
 
-func (r Ring) RotateFingerTable(n node.Node){
-	var tmpNode  node.Node
+func (r Ring) RotateFingerTable(n node.SNode, ringId uint64){
+	var tmpNode  node.SNode
 	ft := len(r.Table)
-for x:=0; x< ft; x +=1{
+	if ft <32 || (n.Id >= ringId && n.Id <= ringId +uint64(8)){
+		for x:=0; x< ft; x +=1{
 		
 		if r.Table[x].Id == n.Id{
 			tmpNode =r.Table[x].Node
@@ -55,19 +136,20 @@ for x:=0; x< ft; x +=1{
 		}
 
 
+		}
+		if ft <32{
+			r.Table = append(r.Table, FingerTable{Id: n.Id ,Node: n})
+		}
+	}
 }
-if ft <32{
-	r.Table = append(r.Table, FingerTable{Id: n.Id ,Node: n})
-}
-}
 
 
 
 
 
 
-func(r Ring) FindPeer() node.Node{
-var result node.Node
+func(r Ring) FindPeer() node.SNode{
+var result node.SNode
 var theUrl =""
 x:=0;
 	for a:=3; a<256; a +=1{
@@ -125,7 +207,7 @@ x:=0;
 
 
 func (r Ring) CheckPeer42069(theUrl, a, b, c, d string){
-var result node.Node
+var result node.SNode
 var finger FingerTable
 var Mtx	sync.Mutex
 		url :=theUrl +":42069/getPeer"
@@ -155,7 +237,7 @@ var Mtx	sync.Mutex
 }
 
 func (r Ring) CheckPeer80(theUrl, a, b, c, d string){
-var result node.Node
+var result node.SNode
 var finger FingerTable
 var Mtx	sync.Mutex
 		theUrl = theUrl+":80/getPeer"
