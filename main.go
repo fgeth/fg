@@ -27,6 +27,7 @@ import(
 	"github.com/fgeth/fg/node"
 	"github.com/fgeth/fg/ring"
 	"github.com/fgeth/fg/transaction"
+	"github.com/fgeth/fg/wallet"
 	//"github.com/fgeth/bine/tor"
 	//"github.com/fgeth/fasthttp"
 
@@ -114,7 +115,12 @@ func main(){
 		common.Ring = tmpRing
 	}
 	
-	
+	if auth !="password"{
+		common.Wallet, _ = wallet.ImportWallet(common.MyNode.Path, auth)
+	}else{
+		NewWallet()
+		
+	}
 	if *Gen{
 		fmt.Println("Genesis Block")
 		common.FGValue = .01
@@ -140,7 +146,6 @@ func main(){
 		}
 	
 		directory()
-		wallet()
 		
 		
 		test()
@@ -150,7 +155,7 @@ func main(){
 		//common.GetTxs()
 	}
 	wg.Add(1)
-	go server()
+	server()
 	go postTest()
 	//torServer()
 	
@@ -248,7 +253,7 @@ func directory(){
     }
 
 }
-func wallet(){
+func NewWallet(){
 common.Wallet.Items.Item = map[string]item.Item{}
 common.Wallet.Items.Keys = map[string][]*ecdsa.PrivateKey{}
 
@@ -258,28 +263,35 @@ func server(){
 	defer wg.Done()
 	
     r := mux.NewRouter()
-	//r.HandleFunc("/", home).Methods("GET")
-	r.HandleFunc("/getBlock", sendBlock).Methods("POST")
 	//r.HandleFunc("/getNodes", sendNodes).Methods("GET")
 	//r.HandleFunc("/getTxs", sendTxs).Methods("GET")
+	//r.HandleFunc("/", home).Methods("GET")
+	r.HandleFunc("/getBlock", sendBlock).Methods("POST")
+	r.HandleFunc("/getItem/{id}", GetItem).Methods("GET")
 	r.HandleFunc("/getWallet", GetWallet).Methods("GET")
 	r.HandleFunc("/getPeer", GetPeer).Methods("GET")
-	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")
-	//r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
+	r.HandleFunc("/sendTx", sendNewTransaction).Methods("POST")	
 	r.HandleFunc("/block", createNewBlock).Methods("POST")
 	r.HandleFunc("/addItem", createNewItem).Methods("POST")
+	r.HandleFunc("/buyItem", buyItem).Methods("POST")
 	r.HandleFunc("/newNode", newNode).Methods("POST")
 	//r.HandleFunc("/blockTxs", processTxs).Methods("POST")
+	//r.HandleFunc("/Tx", CreateNewTransaction).Methods("POST")
 	
 	
-	
-	staticFileDirectory := http.Dir(path)
+	path2Store := filepath.Join(common.MyNode.Path, "store")
+	path2Store = path2Store + "/"
+	fmt.Println("Store is located at :", path2Store)
+	staticFileDirectory := http.Dir(path2Store)
 	
 	staticFileHandler := http.StripPrefix("/store/", http.FileServer(staticFileDirectory))
 	
 	r.PathPrefix("/store/").Handler(staticFileHandler).Methods("GET")
 	
-	fmt.Println("Listening on port :", common.MyNode.Port)
+	staticFileHandler2 := http.StripPrefix("/Store/", http.FileServer(staticFileDirectory))
+	
+	r.PathPrefix("/Store/").Handler(staticFileHandler2).Methods("GET")
+	fmt.Println("Listening on port ", common.MyNode.Port)
 	server := &http.Server{
     Addr:    common.MyNode.Port,
     Handler: r,
@@ -424,9 +436,12 @@ func createNewItem(w http.ResponseWriter, r *http.Request) {
 	theItem.Seller = pubKey
 	//path := filepath.Join(common.MyNode.Path, "Keys", theItem.Id) 
 	crypto.StoreRSAKey(prvKey, "Password", theItem.Id, common.MyNode.Path)
+	common.Wallet.Auth = crypto.HashTx([]byte(theItem.Auth))
+	theItem.Auth =""
 	theItem.SaveItem(common.MyNode.Path)
 	
 	common.Wallet.Items.Item[theItem.Id] = theItem
+	common.Wallet.SaveWallet(common.MyNode.Path)
 	fmt.Println("New Item")
 	fmt.Println("The Item: ", theItem)
 	fmt.Println("Num Debit Tx ", len(theItem.Tx.Tx[theItem.Id]))
@@ -438,6 +453,16 @@ func createNewItem(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func buyItem(w http.ResponseWriter, r *http.Request) {
+	reqBody, _ := ioutil.ReadAll(r.Body)
+	 var theItem item.Buy
+	 json.Unmarshal(reqBody, &theItem)
+	 fmt.Println("Trying to Buy the Item ", theItem)
+	 buyItem := theItem.ImportItem(common.MyNode.Path)
+	 fmt.Println("WalletId :", theItem.WalletId)
+	 fmt.Println("Password :", theItem.Password)
+	 json.NewEncoder(w).Encode(buyItem)
+	} 
 func createDebitTx(amt float64, item item.Item)[]transaction.BaseTransaction{
 	var txs []transaction.BaseTransaction
 	var Debit transaction.BaseTransaction
@@ -517,6 +542,17 @@ func GetWallet(w http.ResponseWriter, r *http.Request){
 	json.NewEncoder(w).Encode(common.Wallet)
 }
 
+func GetItem(w http.ResponseWriter, r *http.Request){
+	vars := mux.Vars(r)
+    id, ok := vars["id"]
+    if !ok {
+        fmt.Println("Item id is missing in parameters")
+    }
+    fmt.Println("Item id := ", id)
+	
+	theItem:=item.ImportItem(id, common.MyNode.Path)
+	json.NewEncoder(w).Encode(theItem)
+}
 func GetPeer(w http.ResponseWriter, r *http.Request){
 	
 

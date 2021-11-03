@@ -3,9 +3,25 @@
 <title>
 FG Store Find an Item
 </title>
-<body>
-<H1>Welcome to the FG Store</H1>
 
+<script src="./jquery.js"></script>
+<script>
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+
+url =  window.location.protocol + "//" + window.location.host+"/getItem/"+urlParams.get('Item');
+$.getJSON(url, function(data) {
+    // JSON result in `data` variable
+	document.getElementById("id").innerHTML =data.Id
+	document.getElementById("productId").innerHTML =data.ProductId
+});
+
+</script>
+</header>
+<body>
+<H1><a href="./index.html">Welcome to the FG Store</a></H1>
+<div id="id"><div>
+<div id="productId"><div>
 
 </body>
 </html>

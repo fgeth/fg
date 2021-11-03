@@ -35,6 +35,10 @@ console.log("Url :", url);
  var prodId = document.getElementById("prodId").value;
  console.log("prodId :", prodId);
  var desc = document.getElementById("desc").value;
+ var country = document.getElementById("country").value;
+ var state = document.getElementById("state").value;
+ var city = document.getElementById("city").value;
+ var image = document.getElementById("image").value;
  var amount =parseFloat( document.getElementById("amount").value);
  console.log("Amount :", amount);
  var qty = parseInt(document.getElementById("qty").value);
@@ -47,16 +51,20 @@ console.log("Url :", url);
  var length = parseFloat(document.getElementById("length").value);
  var w2Uint = $("[id*=w2Uint]");
  var width = parseFloat(document.getElementById("width").value);
+ var auth = document.getElementById("password").value;
  console.log("title :", title);
 $.ajax({
    type: "POST",
    url: url,
-   data: JSON.stringify({ "Title": title, "ProductId" : prodId, "Description" : desc, "Amount" : amount, "Qty" : qty, "Color" : color, "Weight" :{"Uint": w1Uint, "Amt":weight } , "Height" : {"Uint": hUint, "Amt":height }, "Length" : {"Uint": lUint, "Amt":length }, "Width" : {"Uint": w2Uint, "Amt":width } }),
+   data: JSON.stringify({ "Title": title, "ProductId" : prodId, "Description" : desc, "Country": country, "State": state, "City": city, "Image": image, "Amount" : amount, "Qty" : qty, "Color" : color, "Weight" :{"Uint": w1Uint, "Amt":weight } , "Height" : {"Uint": hUint, "Amt":height }, "Length" : {"Uint": lUint, "Amt":length }, "Width" : {"Uint": w2Uint, "Amt":width }, "Auth":password }),
    contentType: "application/json",
    success: function (result) {
      
-	 document.getElementById("results").innerHTML =" Item Added"
+	
 	 var item = JSON.parse(result);
+	 document.getElementById("results").innerHTML =" Item Added:"
+	 document.getElementById("Anchor").text ="Link to Item"
+	 document.getElementById("Anchor").href ="http://"+ window.location.host+"/store/getItem.html?Item="+item.Id;
 	 console.log(result);
 	 console.log("More Stuff")
 	 console.log ("Item ID :=", item.Id)
@@ -76,7 +84,7 @@ $.ajax({
 </script>
 </header>
 <body>
-<H1>Welcome to the FG Store</H1>
+<H1><a href="./index.html">Welcome to the FG Store</a></H1>
  <form action="#" onsubmit="upload()">
       <fieldset>
         <legend>Upload photo</legend>
@@ -90,6 +98,14 @@ $.ajax({
 		<input type="text" name="prodId" id="prodId"><br>
 		<label for="desc">Item Description  </label>
 		<textarea name="description" id="desc" rows="5" cols="50"></textarea><br>
+		<label for="country">Country       </label>
+		<input type="text" name="country" id="country"><br>
+		<label for="state">State or Territory      </label>
+		<input type="text" name="state" id="state"><br>
+		<label for="city">City       </label>
+		<input type="text" name="city" id="city"><br>
+		<label for="image">Enter Link to Image --You upload image above the form and get the link and put it here    </label>
+		<input type="text" name="image" id="image"><br>
 		<label for="amount">Price in USD    </label>
 		<input type="text" name="amount" id="amount"><br>
 		<label for="qty">Quantity           </label>
@@ -144,6 +160,7 @@ $.ajax({
 			<option value="m">Meters </option>
 		</select>
 		<input type="text" name="width" id="width"><br>
+		<input type="password" name="password" id="password"></br>
 		<button type="button" id="addJson" onclick="input()" >Input</button>
 		</center>
       </fieldset>
@@ -151,6 +168,7 @@ $.ajax({
 	<br>IPFS Link To Image
 		<a href='' id='url'></a><br>
 		<div id="results"></div><br>
+		<a href='' id='Anchor'></a><br>
 		<center>
 		Your image is now hosted on the Interplanetary File System (IPFS). However, it will disappear<br> 
 		in about 1 to 2 days unless you pin the file.  You can setup and run your own IPFS server or<br>

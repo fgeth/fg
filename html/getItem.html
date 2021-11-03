@@ -1,0 +1,100 @@
+<html>
+<header>
+<title>
+FG Store Find an Item
+</title>
+
+<script src="./jquery.js"></script>
+
+</header>
+<body>
+<H1><a href="./index.html">Welcome to the FG Store</a></H1>
+<div id="id"></div></br>
+<div id="pid"></div></br>
+<div id="title"></div></br>
+<div id="desc"></div></br>
+<div id="amount"></div></br>
+<div id="Qty"></div></br>
+
+<label for="walletId">Wallet Id      </label>
+<input type="text" name="walletId" id="walletId"><br>
+<label for="password">Password      </label>
+<input type="password" name="Password" id="password"><br>
+<button id="buy" onclick="buyItem()">Buy</button>
+
+<div id="result"></div>
+<script>
+var ItemId;
+var Country;
+var State;
+var City;
+var ProductId;
+var WalletId
+var Password
+
+
+function buyItem(){
+		let url =  window.location.protocol + "//" + window.location.host+"/buyItem"
+		 // Creating a XHR object
+            let xhr = new XMLHttpRequest();
+          
+            // open a connection
+            xhr.open("POST", url, true);
+  
+            // Set the request header i.e. which type of content you are sending
+            xhr.setRequestHeader("Content-Type", "application/json");
+  
+            // Create a state change callback
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+  
+                    // Print received data from server
+                    result.innerHTML = this.responseText;
+  
+                }
+            };
+			let WalletId = document.getElementById("walletId").value
+			let Password = document.getElementById("password").value
+            // Converting JSON data to string
+            var data = JSON.stringify({ "Id": ItemId, "ProductId": ProductId, "Country": Country, "State": State, "City":City, "WalletId": WalletId, "Password": Password });
+  
+            // Sending data with the request
+            xhr.send(data);
+        }
+		
+
+function getItem(){
+	const queryString = window.location.search;
+	const urlParams = new URLSearchParams(queryString);
+
+	url =  window.location.protocol + "//" + window.location.host+"/getItem/"+urlParams.get('Item');
+	console.log("Url: ", url);
+	$.getJSON(url, function(data) {
+		// JSON result in `data` variable
+		console.log(data);
+		console.log("Product ID: ", data.ProductId)
+		ItemId = data.Id;
+		ProductId = data.ProductId
+		Country = data.Country
+		State = data.State
+		City = data.City
+	
+		
+		document.getElementById("id").innerHTML ="Item Id " + data.Id;
+		document.getElementById("pid").innerHTML ="Item Category " +data.ProductId;
+		document.getElementById("title").innerHTML ="Title " +data.Title;
+		document.getElementById("desc").innerHTML ="Description " +data.Description;
+		document.getElementById("amount").innerHTML ="Amount $" +data.Amount;
+		document.getElementById("Qty").innerHTML ="Qty" +data.Qty;
+		
+	})
+}
+$( document ).ready(function()  {
+getItem();
+console.log("Run on load")
+});
+</script>
+</body>
+
+</html>
+

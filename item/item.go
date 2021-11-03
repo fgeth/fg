@@ -20,6 +20,10 @@ type Item struct {
 	ProductId			string
 	Title				string
 	Description			string
+	Country				string
+	State				string
+	City				string
+	Image				string
 	Amount				float64
 	Qty					uint32
 	Color				string
@@ -30,7 +34,19 @@ type Item struct {
 	Tx					TX		//Index is Item Id and array of Debit transactions 
 	Seller				rsa.PublicKey
 	Buyer				rsa.PublicKey
+	Auth				string
 }
+
+type Buy struct {
+	Id					string
+	ProductId			string
+	Country				string
+	State				string
+	City				string
+	WalletId			string
+	Password			string
+}
+
 
 type Weight struct {
 	Unit 		string				//oz, lbs, etc..
@@ -49,47 +65,111 @@ Tx	map[string][]transaction.BaseTransaction
 }
 
 
-func CreateItem(id string, productId string, title string, description string, amount float64, qty uint32, color string, weight Weight, height Size,length Size, width Size, tx TX, seller rsa.PublicKey) Item{
+func CreateItem(id string, productId string, title string, description string, country string, state string, city string, image string, amount float64, qty uint32, color string, weight Weight, height Size,length Size, width Size, tx TX, seller rsa.PublicKey, auth string) Item{
 	
 	
-	return Item{id,productId,title,description,amount,qty,color,weight,height,length,width,tx, seller,seller}
+	return Item{id,productId,title,description,country,state,city,image,amount,qty,color,weight,height,length,width,tx, seller,seller, auth}
 
 }
 
 func (item *Item) SaveItem(dirname string){
-   
+   fmt.Println("Saving Item To ",dirname)
 	path :=filepath.Join(dirname, "items")
 	 
 	_, err := os.Stat(path)
 	
     if os.IsNotExist(err) {
 		err := os.Mkdir(dirname, 0755)
-		fmt.Println(err)
+		fmt.Println("Creating Root Directory", err)
 		err2 := os.Mkdir(path, 0755)
-		fmt.Println(err2)
+		fmt.Println("Creating Items Directory", err2)
+		
     }
-	
-	fileName := filepath.Join(path,item.Id)
+	fileName := filepath.Join(path, item.Id)
 	fmt.Println(fileName)
 	file, _ := json.MarshalIndent(item, "", " ")
  
-	_ = ioutil.WriteFile(fileName, file, 0644)
+	err = ioutil.WriteFile(fileName, file, 0644)
+	if err !=nil{
+		fmt.Println("Error saving Item: ",err)
+	}
+	if item.Country !=""{
+			path =filepath.Join(path , item.Country )
+			err2 := os.Mkdir(path, 0755)
+			fmt.Println("Creating Country Folder", err2)
+			if item.State !=""{
+				path =filepath.Join(path , item.State )
+				err2 = os.Mkdir(path, 0755)
+				fmt.Println("Creating State Folder",err2)
+				if item.City !=""{
+					path =filepath.Join(path , item.City )
+					err2 = os.Mkdir(path, 0755)
+					fmt.Println("Creating City Folder",err2)
+					fmt.Println(err2)
+				
+				}
+			
+			}
+		}
+		if item.ProductId !=""{
+				path =filepath.Join(path , item.ProductId )
+				err2 := os.Mkdir(path, 0755)
+				fmt.Println("Creating ProductId Folder",err2)
+				fmt.Println(err2)
+			
+			}
+	fileName = filepath.Join(path, item.Id)
+	fmt.Println(fileName)
+	
+	err = ioutil.WriteFile(fileName, file, 0644)
+	if err !=nil{
+		fmt.Println("Error saving Item: ",err)
+	}
 
 }
 
-func ImportItem(id string) Item{
-	dirname, err := os.UserHomeDir()
+func ImportItem(id, dirname string) Item{
+	path :=filepath.Join(dirname, "items")
+	 _, err := os.Stat(path)
     if err != nil {
-        fmt.Println( err )
+        fmt.Println( "error access Item directory", err )
     }
 	
-	path :=filepath.Join(dirname, "fg", "items", id )
+	path =filepath.Join(path, id )
 	file, _ := ioutil.ReadFile(path)
 	var item Item
 	_ = json.Unmarshal([]byte(file), &item)
 	
 	return item
 }
+
+
+func (buyItem *Buy) ImportItem( dirname string) Item{
+	path :=filepath.Join(dirname, "items")
+	 _, err := os.Stat(path)
+    if err != nil {
+        fmt.Println( "error access Item directory", err )
+    }
+	if buyItem.Country !=""{
+		path =filepath.Join(path, buyItem.Country )
+		if buyItem.State !=""{
+			path =filepath.Join(path, buyItem.State )
+			if buyItem.City !=""{
+				path =filepath.Join(path, buyItem.City )
+			}
+		}
+	}
+	if buyItem.ProductId !=""{
+		path =filepath.Join(path, buyItem.ProductId )
+	}
+	path =filepath.Join(path, buyItem.Id )
+	file, _ := ioutil.ReadFile(path)
+	var item Item
+	_ = json.Unmarshal([]byte(file), &item)
+	
+	return item
+}
+
 
 func (item Item) ItemHash() crypto.Hash{
 

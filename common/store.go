@@ -27,7 +27,7 @@ func AllItemsInDir() {
 	}
 	for _, f := range files {
 		fmt.Println(f.Name())
-		  Items[f.Name()] = item.ImportItem(f.Name())
+		  Items[f.Name()] = item.ImportItem(f.Name(), MyNode.Path)
 	}
    
 	  
