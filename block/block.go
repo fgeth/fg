@@ -41,10 +41,6 @@ type SignedBlock struct {
 
 }
 
-type MinBlock struct{
-	ChainYear			uint64						//Year this block was created
-	BlockNumber			uint64						//Block Number
-}
 func (block *Block) GetUnsignedBlock() Block{
 
 	var unsigned Block
@@ -80,19 +76,7 @@ func (block Block) SignBlock(prvKey *ecdsa.PrivateKey ){
 	signature.PubKey = crypto.EncodePubKey(&prvKey.PublicKey)
 	block.Signed = append(block.Signed, signature)
 }
-func (block MinBlock) BlockHash() string{
-	//kh :=crypto.NewKeccakState()
-	
-	json , err:= json.Marshal(block)
-	if err !=nil{
-		fmt.Println("Error reading MiniBLock", err)
-		
-	}
-	
-	blockHash :=crypto.HashTx([]byte(json))
-	fmt.Println("The Hash :", blockHash)
-	return blockHash
-}
+
 
 
 func (block *Block) SaveBlock(dirname string){
