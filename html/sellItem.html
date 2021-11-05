@@ -56,7 +56,7 @@ console.log("Url :", url);
 $.ajax({
    type: "POST",
    url: url,
-   data: JSON.stringify({ "Title": title, "ProductId" : prodId, "Description" : desc, "Country": country, "State": state, "City": city, "Image": image, "Amount" : amount, "Qty" : qty, "Color" : color, "Weight" :{"Uint": w1Uint, "Amt":weight } , "Height" : {"Uint": hUint, "Amt":height }, "Length" : {"Uint": lUint, "Amt":length }, "Width" : {"Uint": w2Uint, "Amt":width }, "Auth":password }),
+   data: JSON.stringify({ "Title": title, "ProductId" : prodId, "Description" : desc, "Country": country, "State": state, "City": city, "Image": image, "Amount" : amount, "Qty" : qty, "Color" : color, "Weight" :{"Uint": w1Uint, "Amt":weight } , "Height" : {"Uint": hUint, "Amt":height }, "Length" : {"Uint": lUint, "Amt":length }, "Width" : {"Uint": w2Uint, "Amt":width }, "WalletId": walletId, "Auth":password }),
    contentType: "application/json",
    success: function (result) {
      
@@ -106,7 +106,7 @@ $.ajax({
 		<input type="text" name="city" id="city"><br>
 		<label for="image">Enter Link to Image --You upload image above the form and get the link and put it here    </label>
 		<input type="text" name="image" id="image"><br>
-		<label for="amount">Price in USD    </label>
+		<label for="amount">Price in Virtual Dollars   </label>
 		<input type="text" name="amount" id="amount"><br>
 		<label for="qty">Quantity           </label>
 		<input type="text" name="qty" id="qty"><br>
@@ -160,6 +160,9 @@ $.ajax({
 			<option value="m">Meters </option>
 		</select>
 		<input type="text" name="width" id="width"><br>
+		<label for="walletId">Wallet Id      </label>
+		<input type="text" name="walletId" id="walletId"><br>
+		<label for="password">Password      </label>
 		<input type="password" name="password" id="password"></br>
 		<button type="button" id="addJson" onclick="input()" >Input</button>
 		</center>

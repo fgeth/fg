@@ -1,12 +1,12 @@
 package note
 
 import(
-
+	"math/big"
 )
 
 type Stack struct{
 	Id			string 				    //Generate a publick key and turn it into an address
-	Amount		uint64					//Value in virtual dollars
+	Amount		float64					//Value in virtual dollars
 	Notes		[]Note					//Array of Notes
 	Hash		string					//Hash of Stack amount, Notes, Id plus Current Owners Public Key
 	PHash		string					//Hash of Stack amount, Notes, Id plus Past Owners Public Key the OTP

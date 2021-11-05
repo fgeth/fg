@@ -18,7 +18,7 @@ type SNode struct {
 	PKStr			string							//Node PublicKey as string	
 	PRKStr			string							//Node PrivateKey as string	
 	Address			string							//File Name for Password Protected Stored Private Key	
-	
+	WalletId		string							//Address for wallet
 }
 
 
@@ -33,6 +33,7 @@ func (snode *SNode) Node() Node{
 		node.PKStr = snode.PKStr
 		node.PRKStr = snode.PRKStr
 		node.Address = snode.Address
+		node.WalletId = snode.WalletId
 		return node
 }
 

@@ -20,6 +20,7 @@ import(
 	"syscall"
 	"time"
 	"github.com/gorilla/mux"
+	"github.com/fgeth/fg/bank"
 	"github.com/fgeth/fg/block"
 	"github.com/fgeth/fg/common"
 	"github.com/fgeth/fg/crypto"
@@ -94,6 +95,7 @@ func main(){
 		fmt.Println("Node Ip is :" , common.MyNode.Ip)
 		fmt.Println("Node Address is :" , common.MyNode.Address)
 		fmt.Println("Node Path is :" , common.MyNode.Path)
+		fmt.Println("Node Wallet is :" , common.MyNode.WalletId)
 	common.MyNode.SaveNode(common.MyNode.Path)
 	common.TheNodes.Node = map[string]node.Node{common.MyNode.PKStr: common.MyNode}
 	tmpRing, err := ring.ImportRing(common.MyNode.Path)
@@ -116,7 +118,11 @@ func main(){
 	}
 	
 	if auth !="password"{
-		common.Wallet, _ = wallet.ImportWallet(common.MyNode.Path, auth)
+		common.Wallet, err = wallet.ImportWallet(common.MyNode.Path, common.MyNode.WalletId, auth)
+		if err!=nil{
+			NewWallet()
+		}
+		
 	}else{
 		NewWallet()
 		
@@ -155,8 +161,9 @@ func main(){
 		//common.GetTxs()
 	}
 	wg.Add(1)
-	server()
 	go postTest()
+	server()
+	
 	//torServer()
 	
 	
@@ -172,7 +179,8 @@ func main(){
 func NewRing() ring.Ring{
 	var finger []ring.FingerTable
 	var rnodes []node.RNode
-	ring := ring.Ring {uint64(0), finger, rnodes }
+	var banks  []bank.Node	
+	ring := ring.Ring {uint64(0), finger, rnodes,banks }
 	return ring
 }
 func Trusted(){
@@ -201,6 +209,8 @@ func postTest(){
 	fmt.Println("ChainYear:", block.ChainYear)
 	fmt.Println("FGValue:", block.FGValue)
 	fmt.Println("Txs:", block.Txs)
+	fmt.Println("Wallet Id", common.Wallet.Id)
+	fmt.Println("Wallet Auth", common.Wallet.Auth)
 	
 
 }
@@ -254,9 +264,16 @@ func directory(){
 
 }
 func NewWallet(){
+
+prvKy,_:=crypto.GenerateKey()
+pubKey := prvKy.PublicKey
+common.Wallet.Id = crypto.GetAddress(&pubKey)
 common.Wallet.Items.Item = map[string]item.Item{}
 common.Wallet.Items.Keys = map[string][]*ecdsa.PrivateKey{}
-
+common.Wallet.Auth = auth
+common.Wallet.SaveWallet(common.MyNode.Path)
+common.MyNode.WalletId = common.Wallet.Id
+common.MyNode.SaveNode(common.MyNode.Path)
 }
 func server(){
 	wg.Add(1)
@@ -429,25 +446,30 @@ func createNewItem(w http.ResponseWriter, r *http.Request) {
 	// item.Id =  strconv.FormatUint(uintD, 10)
 	theItem.Id = aHash
 	fmt.Println("Amount", theItem.Amount)
-	
-	theItem.Tx.Tx = map[string][]transaction.BaseTransaction{theItem.Id: createDebitTx(theItem.Amount, theItem)}
-	prvKey := crypto.GenerateRSAKey()
-	pubKey := prvKey.PublicKey
-	theItem.Seller = pubKey
-	//path := filepath.Join(common.MyNode.Path, "Keys", theItem.Id) 
-	crypto.StoreRSAKey(prvKey, "Password", theItem.Id, common.MyNode.Path)
-	common.Wallet.Auth = crypto.HashTx([]byte(theItem.Auth))
-	theItem.Auth =""
-	theItem.SaveItem(common.MyNode.Path)
-	
-	common.Wallet.Items.Item[theItem.Id] = theItem
-	common.Wallet.SaveWallet(common.MyNode.Path)
-	fmt.Println("New Item")
-	fmt.Println("The Item: ", theItem)
-	fmt.Println("Num Debit Tx ", len(theItem.Tx.Tx[theItem.Id]))
-	for x :=0; x < len(theItem.Tx.Tx[theItem.Id]); x +=1{
-			fmt.Println("Debit Amount", theItem.Tx.Tx[theItem.Id][x].Amount)
-			fmt.Println("Debit OTP", theItem.Tx.Tx[theItem.Id][x].OTP)
+	fmt.Println("Wallet", theItem.WalletId)
+	 aWallet, err:=wallet.ImportWallet(common.MyNode.Path, theItem.WalletId, theItem.Auth)
+	 if err == nil{
+			theItem.Tx.Tx = map[string][]transaction.BaseTransaction{theItem.Id: createDebitTx(theItem.Amount, theItem)}
+			theItem.Comm = crypto.GenerateRSAKey()
+			pubKey := theItem.Comm.PublicKey
+			theItem.Seller = pubKey
+			//path := filepath.Join(common.MyNode.Path, "Keys", theItem.Id) 
+			crypto.StoreRSAKey(theItem.Comm, "Password", theItem.Id, common.MyNode.Path)
+			prvtKey,_ := crypto.GenerateKey()
+			theItem.Address = crypto.GetAddress(&prvtKey.PublicKey)
+			aWallet.Auth = crypto.HashTx([]byte(theItem.Auth))
+			theItem.Auth =""
+			theItem.SaveItem(common.MyNode.Path)
+			
+			aWallet.Items.Item[theItem.Id] = theItem
+			aWallet.SaveWallet(common.MyNode.Path)
+			fmt.Println("New Item")
+			fmt.Println("The Item: ", theItem)
+			fmt.Println("Num Debit Tx ", len(theItem.Tx.Tx[theItem.Id]))
+			for x :=0; x < len(theItem.Tx.Tx[theItem.Id]); x +=1{
+					fmt.Println("Debit Amount", theItem.Tx.Tx[theItem.Id][x].Amount)
+					fmt.Println("Debit OTP", theItem.Tx.Tx[theItem.Id][x].OTP)
+			}
 	}
 	json.NewEncoder(w).Encode(theItem)
 
@@ -459,8 +481,12 @@ func buyItem(w http.ResponseWriter, r *http.Request) {
 	 json.Unmarshal(reqBody, &theItem)
 	 fmt.Println("Trying to Buy the Item ", theItem)
 	 buyItem := theItem.ImportItem(common.MyNode.Path)
-	 fmt.Println("WalletId :", theItem.WalletId)
-	 fmt.Println("Password :", theItem.Password)
+	 //fmt.Println("WalletId :", theItem.WalletId)
+	 //fmt.Println("Password :", theItem.Password)
+	 aWallet, err :=wallet.ImportWallet(common.MyNode.Path, theItem.WalletId, crypto.HashTx([]byte(theItem.Password)))
+	 if err == nil{
+		aWallet.SendFunds(theItem)
+	 }
 	 json.NewEncoder(w).Encode(buyItem)
 	} 
 func createDebitTx(amt float64, item item.Item)[]transaction.BaseTransaction{
@@ -551,7 +577,8 @@ func GetItem(w http.ResponseWriter, r *http.Request){
     fmt.Println("Item id := ", id)
 	
 	theItem:=item.ImportItem(id, common.MyNode.Path)
-	json.NewEncoder(w).Encode(theItem)
+	buyItem := theItem.Buy()
+	json.NewEncoder(w).Encode(buyItem)
 }
 func GetPeer(w http.ResponseWriter, r *http.Request){
 	
@@ -633,6 +660,7 @@ func NewNode() node.Node{
 	node.PrvKey, _ = crypto.GenerateKey()
 	node.PubKey = &node.PrvKey.PublicKey
 	node.PRKStr, node.PKStr  = crypto.Encode(node.PrvKey, node.PubKey)
+	common.MyNode.WalletId = crypto.GetAddress(node.PubKey)
 	node.Address, _ = crypto.StoreKey( node.PrvKey, auth, path)
 	fmt.Println("Node Prvt Key File : ", node.Address)
 	node.Port = ":"+port

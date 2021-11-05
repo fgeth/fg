@@ -30,6 +30,7 @@ var (
 	ChainYear			uint64							//Current Year
 	Ring				ring.Ring						//Block Ring
 	BlockNumber			uint64							//Current Block Number
+	MS					MoneySupply						//The Money Supply
 	ActiveNodes			[]string						//Array of known active Nodes Public Key as string
 	PB					*block.Block						//Current Block This is the Last Know Verified Block
 	Tx					[]transaction.Transaction		//Last Known Verified Block Transactions
@@ -39,6 +40,7 @@ var (
 	Chain				chain.Chain						//Current Chain
 	Chains				chain.Chains					//All Past Year Chains 
 	FGValue				float64							//The Value of 1 FG
+	USDRate				float64							//The value of One US Dolar to One Virtual Dollar This will start out as 1 but the banks will keep an eye on this and adjust it when need or if needed
 	Active				[]node.Node						//All Known Active Nodes Next Block
 	TheNodes			 Nodes							//All known Nodes
 	Writers				[]string						//Array of Current Block Nodes PublicKey as string Based on Block Hash includes Leader wich is the first node listed
@@ -138,7 +140,7 @@ func FG2USD(amount *big.Int) float64{
 	f = f.Quo(f, t)
 
 	fv, _:= f.Float64()
-	usd :=   FGValue * fv
+	usd :=   FGValue * fv * USDRate
 	return usd
 	
 	
@@ -164,7 +166,7 @@ func USD2FG(amount float64) *big.Int{
 	
 	bigval := new(big.Float)
 
-	fgs := amount / FGValue
+	fgs := (amount / USDRate) / FGValue
 
 	bigval.SetFloat64(fgs)
 

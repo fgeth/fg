@@ -170,12 +170,12 @@ if MyNode.Leader{
 	NumTx += bn
 	if bn <1000{
 		n:= big.NewInt(0)
-		n.SetString("10000000000000000", 10)
+		n.SetString("1000000000000000", 10)
 		t:= big.NewInt(bn)
 		BlockReward =new(big.Int).Mul(t, n)
 	}else{
 		BlockReward= big.NewInt(0)
-		BlockReward.SetString("10000000000000000000", 10)
+		BlockReward.SetString("1000000000000000000", 10)
 	}
 		fmt.Println(BlockReward)
 	
@@ -205,7 +205,11 @@ if MyNode.Leader{
 		NumTx = NumTx - 1000
 		
 	}
+	MS.Dollars += FG2USD(BlockReward)
 	
+	MS.FG.Add(MS.FG, BlockReward)
+	MS.Max += FG2USD(BlockReward) 
+	MS.IR = (MS.Max - MS.LMax) / MS.LMax
 	NodeTx := PayOutNodes(TxFees, blockNumber)	
 	for x:=0; x < len(NodeTx); x +=1{
 			blockTx = append (blockTx, NodeTx[x].TxHash)
@@ -364,7 +368,7 @@ func CreateGenBlocks(){
 	tx2.SaveTx(MyNode.Path)
 	add := crypto.BytesToAddress([]byte(tx1.TxHash))
 	fmt.Println("Address :", add)
-	FGValue = float64(.01)
+	FGValue = float64(1.00)
 	Wallet.FGs = Wei2FG(BlockReward)
 	Wallet.Wei = BlockReward
 	Wallet.Dollars = FG2USD(BlockReward)
@@ -432,4 +436,11 @@ func CreateGenBlocks(){
 	fmt.Println("PUBKey :", MyNode.PKStr)
 	Writers = append(Writers, MyNode.PKStr)
 	TheNodes.Node = map[string]node.Node{MyNode.PKStr: MyNode}
+	MS.Dollars = float64(40000000)
+	m:= big.NewInt(4)
+	MS.FG = BlockReward.Mul(m, BlockReward)
+	MS.Max = MS.Dollars
+	MS.LMax = MS.Max
+	MS.IR = (MS.Max - MS.LMax) / MS.LMax
+	USDRate = float64(1)
 }

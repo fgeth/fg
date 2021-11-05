@@ -24,7 +24,7 @@ type Item struct {
 	State				string
 	City				string
 	Image				string
-	Amount				float64
+	Amount				float64							//In virtual Dollars
 	Qty					uint32
 	Color				string
 	Weight				Weight
@@ -34,18 +34,12 @@ type Item struct {
 	Tx					TX		//Index is Item Id and array of Debit transactions 
 	Seller				rsa.PublicKey
 	Buyer				rsa.PublicKey
+	Comm				rsa.PrivateKey
+	WalletId			string
 	Auth				string
+	Address				string			//payout address
 }
 
-type Buy struct {
-	Id					string
-	ProductId			string
-	Country				string
-	State				string
-	City				string
-	WalletId			string
-	Password			string
-}
 
 
 type Weight struct {
@@ -65,10 +59,10 @@ Tx	map[string][]transaction.BaseTransaction
 }
 
 
-func CreateItem(id string, productId string, title string, description string, country string, state string, city string, image string, amount float64, qty uint32, color string, weight Weight, height Size,length Size, width Size, tx TX, seller rsa.PublicKey, auth string) Item{
+func CreateItem(id string, productId string, title string, description string, country string, state string, city string, image string, amount float64, qty uint32, color string, weight Weight, height Size,length Size, width Size, tx TX, seller rsa.PublicKey,comm	rsa.PrivateKey, walletId string, auth string, address string) Item{
 	
 	
-	return Item{id,productId,title,description,country,state,city,image,amount,qty,color,weight,height,length,width,tx, seller,seller, auth}
+	return Item{id,productId,title,description,country,state,city,image,amount,qty,color,weight,height,length,width,tx, seller,seller,comm, walletId, auth, address}
 
 }
 
@@ -143,32 +137,19 @@ func ImportItem(id, dirname string) Item{
 	return item
 }
 
-
-func (buyItem *Buy) ImportItem( dirname string) Item{
-	path :=filepath.Join(dirname, "items")
-	 _, err := os.Stat(path)
-    if err != nil {
-        fmt.Println( "error access Item directory", err )
-    }
-	if buyItem.Country !=""{
-		path =filepath.Join(path, buyItem.Country )
-		if buyItem.State !=""{
-			path =filepath.Join(path, buyItem.State )
-			if buyItem.City !=""{
-				path =filepath.Join(path, buyItem.City )
-			}
-		}
-	}
-	if buyItem.ProductId !=""{
-		path =filepath.Join(path, buyItem.ProductId )
-	}
-	path =filepath.Join(path, buyItem.Id )
-	file, _ := ioutil.ReadFile(path)
-	var item Item
-	_ = json.Unmarshal([]byte(file), &item)
-	
-	return item
+func (item Item) Buy() Buy{
+	var buyItem Buy
+	buyItem.Id = item.Id
+	buyItem.Amount = item.Amount
+	buyItem.Seller = item.Seller
+	buyItem.ProductId = item.ProductId
+	buyItem.Country = item.Country
+    buyItem.State =item.State
+	buyItem.City = item.City
+	buyItem.Address = item.Address
+	 return buyItem
 }
+
 
 
 func (item Item) ItemHash() crypto.Hash{

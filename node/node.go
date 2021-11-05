@@ -29,6 +29,7 @@ type Node struct {
 	Leader			bool							//True if the current Block Leader
 	Keys			Key								//Array of Private Keys as Addresses
 	Comms			Comm							//Node RSA Keys
+	WalletId		string							//Address
 	
 	
 }
@@ -55,6 +56,7 @@ func (node *Node) SNode() SNode{
 		snode.PKStr = node.PKStr
 		snode.PRKStr = node.PRKStr
 		snode.Address = node.Address
+		snode.WalletId = node.WalletId
 		return snode
 }
 

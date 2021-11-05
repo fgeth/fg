@@ -15,6 +15,7 @@ FG Store Find an Item
 <div id="desc"></div></br>
 <div id="amount"></div></br>
 <div id="Qty"></div></br>
+<div id="Address"></div></br>
 
 <label for="walletId">Wallet Id      </label>
 <input type="text" name="walletId" id="walletId"><br>
@@ -29,6 +30,7 @@ var Country;
 var State;
 var City;
 var ProductId;
+Var Amount;
 var WalletId
 var Password
 
@@ -56,7 +58,7 @@ function buyItem(){
 			let WalletId = document.getElementById("walletId").value
 			let Password = document.getElementById("password").value
             // Converting JSON data to string
-            var data = JSON.stringify({ "Id": ItemId, "ProductId": ProductId, "Country": Country, "State": State, "City":City, "WalletId": WalletId, "Password": Password });
+            var data = JSON.stringify({ "Id": ItemId, "ProductId": ProductId, "Country": Country, "State": State, "City":City, "Amount": Amount"WalletId": WalletId, "Password": Password });
   
             // Sending data with the request
             xhr.send(data);
@@ -78,6 +80,7 @@ function getItem(){
 		Country = data.Country
 		State = data.State
 		City = data.City
+		Address = data.Address
 	
 		
 		document.getElementById("id").innerHTML ="Item Id " + data.Id;
@@ -86,6 +89,7 @@ function getItem(){
 		document.getElementById("desc").innerHTML ="Description " +data.Description;
 		document.getElementById("amount").innerHTML ="Amount $" +data.Amount;
 		document.getElementById("Qty").innerHTML ="Qty" +data.Qty;
+		document.getElementById("address").innerHTML ="Payout Address" +data.Address;
 		
 	})
 }

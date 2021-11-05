@@ -11,13 +11,16 @@ import (
 	"sync"
 	"strconv"
 	"time"
+	"github.com/fgeth/fg/bank"
 	"github.com/fgeth/fg/node"
+	
 )
 
 type Ring struct{
 	Id		uint64					//This Nodes current location on Ring
 	Table 	[]FingerTable			//The 32 Nodes On Ring that the IP address is Known
 	Nodes	[]node.RNode		    //Index is location on Ring and the nodes corresponding Public Key 
+	Banks	[]bank.Node				//Array of All Known and Trusted Banks
 	
 }
 func(r Ring) SaveRing (dirname string) {
