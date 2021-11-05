@@ -3,7 +3,7 @@ package node
 
 
 import (
-	//"crypto/rsa"
+	"crypto/rsa"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -28,6 +28,8 @@ type Node struct {
 	Writer			bool							//True if a current Block Node 
 	Leader			bool							//True if the current Block Leader
 	Keys			Key								//Array of Private Keys as Addresses
+	RSAPub			rsa.PublicKey					//RSA Public Key
+	RSAPrvt			rsa.PrivateKey					//RSA Private Key
 	Comms			Comm							//Node RSA Keys
 	WalletId		string							//Address
 	

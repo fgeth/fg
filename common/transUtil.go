@@ -11,9 +11,13 @@ import(
 	"path/filepath"
 	//"strconv"
 	"time"
+	"github.com/fgeth/fg/bank"
 	"github.com/fgeth/fg/block"
 	"github.com/fgeth/fg/crypto"
+	"github.com/fgeth/fg/note"
+	"github.com/fgeth/fg/item"
 	"github.com/fgeth/fg/transaction"
+	"github.com/fgeth/fg/wallet"
 	
 	
 )
@@ -121,7 +125,7 @@ func GetTxs(){
 func VaildTransaction(Tx transaction.Transaction) bool{
 txFee := Tx.CalcFee()
  txInterest := big.NewInt(0)
-if FGValue >=100{
+if CoinValue >=100{
 	txInterest = Tx.CalcInterest()
 }
 if Tx.Payout == true{
@@ -231,4 +235,116 @@ func SubmitTransaction(tx transaction.Transaction, writer string) bool{
 	}
 	return false
 
+}
+
+func SubmitPayment(payment note.Stack, theItem item.Buy) bool{
+	var response bool
+	response = false
+	numB := len(Ring.Banks)
+	if numB>0{
+		b :=findBank(uint64(numB),payment.Id )
+		
+		p, err:= json.Marshal(payment)
+		if err ==nil{
+			i, err:= json.Marshal(theItem)
+			if err ==nil{
+				for x :=0; x < len(b); x +=1{
+					securePayment, errP :=crypto.RSAEncryptByte(p, Ring.Banks[b[x]].PubKey) 
+				
+				
+					secureItem, errI :=crypto.RSAEncryptByte(i, Ring.Banks[b[x]].PubKey) 
+					if errP ==nil && errI == nil{
+						BM := bank.BankMessage {Ring.Banks[b[x]].Id, securePayment, secureItem}
+						json, _ := json.Marshal(BM)
+						url :="http://"+Ring.Table[0].Node.Ip+":"+Ring.Table[0].Node.Port+"/bankMessage"
+						fmt.Println("Connecting to Ring at :", url)
+						_, err := http.Post(url, "application/json", bytes.NewBuffer(json))
+						if err ==nil{
+							response = true
+							break
+							
+						}
+					}
+				}
+			}
+		}
+	}
+	return response
+
+}
+
+func SendFunds(wallet wallet.Wallet, theItem item.Buy) string{
+  if wallet.Dollars < theItem.Amount{
+	fmt.Println("Wallet has : ", wallet.Dollars)
+	fmt.Println("Not enough Funds")
+	fmt.Println("Item is :", theItem.Amount)
+	return "Not enough funds"
+  }
+  fmt.Println("Item is :", theItem.Amount)
+  fmt.Println("Wallet has : ", wallet.Dollars)
+  
+  var aStack note.Stack
+  var amount float64
+
+  amount =float64(0)
+	for k,v := range wallet.Notes{
+
+			if amount < theItem.Amount{
+				aStack.Notes = map[string]note.Note{v.Id:v}
+				amount += Coins2VDollars(&v.Coins)
+				
+				 delete(wallet.Notes, k)
+
+			}
+			if amount >= theItem.Amount{
+				break
+			}
+		
+
+	}
+	aStack.Amount = amount
+
+	response:= SubmitPayment(aStack, theItem)
+	if !response{
+		return "Error Sending Payment"
+		 for k,n :=range aStack.Notes {
+			wallet.Notes[k] = n
+		 }
+	}
+	
+	return "Sent Payment"
+	
+
+}
+
+func findBank(banks uint64, id string )[]int{
+var tmp, bn uint64
+var theBanks []int
+uintA, uintB, uintC, uintD :=crypto.B32HashToUint64([]byte(id))
+  				for x :=uint64(0); x < banks; x +=uint64(1){
+						switch x%4{
+							case  1:
+								tmp = (uintA % banks)+x
+								
+									
+							case 2:
+								tmp = (uintB % banks)+x
+							
+							case 3:
+								tmp = (uintC % banks)+x
+							
+							case 4:
+								tmp = (uintD % banks)+x
+				
+						}	
+							if tmp > banks{
+								bn = tmp - banks
+							}else{
+								bn = tmp
+							}
+							theBanks  = append(theBanks, int(bn))
+						
+					}
+	
+		return theBanks
 }

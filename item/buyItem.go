@@ -14,6 +14,8 @@ import(
 type Buy struct {
 	Id					string
 	Amount				float64
+	Description			string
+	Title				string
 	Seller				rsa.PublicKey
 	Buyer				rsa.PublicKey
 	ProductId			string

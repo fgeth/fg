@@ -20,7 +20,7 @@ type BaseTransaction struct {
 	ChainYear			uint64						//Chain Transaction belongs to	
 	BlockNumber			uint64						//Block Number Transaction was created in
 	Time				time.Time					//Time Transaction was Created time.now()
-	Amount				*big.Int					//Amount in FGs
+	Amount				*big.Int					//Amount in Coins
 	TxHash				string						//Hash of  ChainYear, Time, and amount plus OTP if Debit Transaction
 	Spent				string						//Hash of Transaction were the Debit Balance of this Transaction was spent
 	TxId				string						//Hash the Transaction that this Base Transaction is a part of as a Debit Transaction
@@ -42,7 +42,7 @@ type BaseTxData struct{
     ChainYear			uint64						//Chain Transaction belongs to	
 	BlockNumber			uint64						//Block Number Transaction was created in
 	Time				time.Time					//Time Transaction was Created time.now()
-	Amount				*big.Int					//Amount in FGs
+	Amount				*big.Int					//Amount in Coins
 	OTP					string						//One Time Password which is the Public Key as a string Used for this Transaction if present transaction value has been spent
 
 }

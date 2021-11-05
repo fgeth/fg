@@ -35,6 +35,7 @@ type Item struct {
 	Seller				rsa.PublicKey
 	Buyer				rsa.PublicKey
 	Comm				rsa.PrivateKey
+	PubKey				string				//file location of RSA private Key
 	WalletId			string
 	Auth				string
 	Address				string			//payout address
@@ -59,10 +60,10 @@ Tx	map[string][]transaction.BaseTransaction
 }
 
 
-func CreateItem(id string, productId string, title string, description string, country string, state string, city string, image string, amount float64, qty uint32, color string, weight Weight, height Size,length Size, width Size, tx TX, seller rsa.PublicKey,comm	rsa.PrivateKey, walletId string, auth string, address string) Item{
+func CreateItem(id string, productId string, title string, description string, country string, state string, city string, image string, amount float64, qty uint32, color string, weight Weight, height Size,length Size, width Size, tx TX, seller rsa.PublicKey,comm	rsa.PrivateKey, walletId string, pubKey string, auth string, address string) Item{
 	
 	
-	return Item{id,productId,title,description,country,state,city,image,amount,qty,color,weight,height,length,width,tx, seller,seller,comm, walletId, auth, address}
+	return Item{id,productId,title,description,country,state,city,image,amount,qty,color,weight,height,length,width,tx, seller,seller,comm, walletId, pubKey, auth, address}
 
 }
 
@@ -142,6 +143,8 @@ func (item Item) Buy() Buy{
 	buyItem.Id = item.Id
 	buyItem.Amount = item.Amount
 	buyItem.Seller = item.Seller
+	buyItem.Title = item.Title
+	buyItem.Description = item.Description
 	buyItem.ProductId = item.ProductId
 	buyItem.Country = item.Country
     buyItem.State =item.State

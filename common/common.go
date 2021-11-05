@@ -39,14 +39,14 @@ var (
 	PTx					[]string						//Array of Transaction Hashes for Pending Block
 	Chain				chain.Chain						//Current Chain
 	Chains				chain.Chains					//All Past Year Chains 
-	FGValue				float64							//The Value of 1 FG
+	CoinValue			float64							//The Value of 1 FG
 	USDRate				float64							//The value of One US Dolar to One Virtual Dollar This will start out as 1 but the banks will keep an eye on this and adjust it when need or if needed
 	Active				[]node.Node						//All Known Active Nodes Next Block
 	TheNodes			 Nodes							//All known Nodes
 	Writers				[]string						//Array of Current Block Nodes PublicKey as string Based on Block Hash includes Leader wich is the first node listed
 	BTxHash				[]string						//Stores processed transaction debit hashes while Block or Leader Node
 	PBTxHash			[]string						//Stores previous Block Transactions to account for Transactions sent to Block Leader until block is created & used to validate transactions are in block
-	NumTx				int64							//Keeps track of number of Transactions resets at 1,000 Transactions and FGValue is bumped .01
+	NumTx				int64							//Keeps track of number of Transactions resets at 1,000 Transactions and CoinValue is bumped .01
 	TTx					[]transaction.Transaction	    //Used to Transfer Transactions To Nodes One Block at a Time	
 	Items				map[string]item.Item			//Index is Item Id
 	MyNode				node.Node
@@ -131,7 +131,7 @@ func SwapActiveNodes(an []string){
 
 }
 
-func FG2USD(amount *big.Int) float64{
+func Coins2VDollars(amount *big.Int) float64{
     fg := new(big.Int)
 	fg.SetString("1000000000000000000", 10)
 
@@ -140,13 +140,13 @@ func FG2USD(amount *big.Int) float64{
 	f = f.Quo(f, t)
 
 	fv, _:= f.Float64()
-	usd :=   FGValue * fv * USDRate
+	usd :=   CoinValue * fv * USDRate
 	return usd
 	
 	
 }
 
-func Wei2FG(amount *big.Int) float64{
+func Wei2Coins(amount *big.Int) float64{
     fg := new(big.Int)
 	fg.SetString("1000000000000000000", 10)
 
@@ -162,11 +162,11 @@ func Wei2FG(amount *big.Int) float64{
 }
 
 
-func USD2FG(amount float64) *big.Int{
+func VDollars2Coins(amount float64) *big.Int{
 	
 	bigval := new(big.Float)
 
-	fgs := (amount / USDRate) / FGValue
+	fgs := (amount / USDRate) / CoinValue
 
 	bigval.SetFloat64(fgs)
 
@@ -188,22 +188,23 @@ func USD2FG(amount float64) *big.Int{
 func genRsa() {
  prvKey := crypto.GenerateRSAKey()
  pubKey := prvKey.PublicKey
- secret := crypto.RSAEncrypt("Secret", pubKey)
+ secret,_ := crypto.RSAEncrypt("Secret", pubKey)
  fmt.Println("Encrypted Message =", secret)
  clearText := crypto.RSADecrypt(secret, prvKey)
  fmt.Println("Message =", clearText)
  publicKey := crypto.EncodeRSAPubKey(&pubKey)
  fmt.Println("Publick Key =", publicKey)
  pKey := crypto.DecodeRSAPubKey(publicKey)
- secret2 := crypto.RSAEncrypt("Secret2", pKey)
+ secret2,_ := crypto.RSAEncrypt("Secret2", pKey)
  fmt.Println("Encrypted Message =", secret2)
  clearText2 := crypto.RSADecrypt(secret2, prvKey)
  fmt.Println("Message =", clearText2)
- pk := prvKey
- err:= crypto.StoreRSAKey( pk ,"Pass", "Key1", MyNode.Path)
+
+ PubKey, err:= crypto.StoreRSAKey( prvKey ,Auth,  MyNode.Path)
+ MyNode.Comms.Rsa = append(MyNode.Comms.Rsa, PubKey) 
  fmt.Println(err)
  pvKey, pbKey, err :=crypto.GetRSAKey("Key1", "Pass") //rsa.PrivateKey,rsa.PublicKey, error
- secret3 := crypto.RSAEncrypt("Secret3", pbKey)
+ secret3,_ := crypto.RSAEncrypt("Secret3", pbKey)
  fmt.Println("Encrypted Message =", secret3)
  clearText3 := crypto.RSADecrypt(secret3, pvKey)
  fmt.Println("Message =", clearText3)

@@ -11,19 +11,19 @@ url =  window.location.protocol + "//" + window.location.host+"/getWallet";
 $.get(url, function(data, status){
    console.log("Data: " + data + "\nStatus: " + status);
 	var wallet = JSON.parse(data);
-	document.getElementById("FGs").innerHTML= wallet.FGs
+	document.getElementById("Coins").innerHTML= wallet.Coins
 	document.getElementById("WEIs").innerHTML= wallet.Wei
 	document.getElementById("Dollars").innerHTML= wallet.Dollars
-	document.getElementById("FGValue").innerHTML= wallet.FGValue
+	document.getElementById("CoinValue").innerHTML= wallet.CoinValue
 	
-	debitFGs = 0
+	debitCoins = 0
 		for (let Item of Object.keys(wallet.Items.Item)) {
 			var Tx = wallet.Items.Item[Item];
 			console.log(Item, Tx);
-				debitFGs = debitFGs + Tx.Amount
+				debitCoins = debitCoins + Tx.Amount
 			}
 	
-	document.getElementById("Pending").innerHTML= debitFGs
+	document.getElementById("Pending").innerHTML= debitCoins
   });
 </script>
 </header>
@@ -31,16 +31,16 @@ $.get(url, function(data, status){
 <H1>Welcome to Your FG Wallet</H1>
  <form action="#" onsubmit="upload()">
       <fieldset>
-        <legend>FGs</legend>
+        <legend>Coins</legend>
 		
-		<label for="FGs">FGs       </label>
-		<div id="FGs"></div>
+		<label for="Coins">Coins       </label>
+		<div id="Coins"></div>
 		<label for="WEIs">WEIs       </label>
 		<div id="WEIs"></div>
 		<label for="Dollars">Dollars       </label>
 		<div id="Dollars"></div>
-		<label for="FGValue">Value of 1 FG       </label>
-		<div id="FGValue"></div>
+		<label for="CoinValue">Value of 1 FG       </label>
+		<div id="CoinValue"></div>
 		<label for="Pending">Pending Amount for Items Being Sold       </label>
 		<div id="Pending"></div>
 		

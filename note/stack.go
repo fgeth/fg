@@ -7,7 +7,7 @@ import(
 type Stack struct{
 	Id			string 				    //Generate a publick key and turn it into an address
 	Amount		float64					//Value in virtual dollars
-	Notes		[]Note					//Array of Notes
+	Notes		map[string]Note			//Index Note Id and the associated Note will be used to hide order of Notes coming out of bank
 	Hash		string					//Hash of Stack amount, Notes, Id plus Current Owners Public Key
 	PHash		string					//Hash of Stack amount, Notes, Id plus Past Owners Public Key the OTP
 	R			big.Int					//R value of Signature

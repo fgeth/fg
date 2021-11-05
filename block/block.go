@@ -19,7 +19,7 @@ import (
 type Block struct {
 	ChainYear			uint64						//Year this block was created
 	BlockNumber			uint64						//Block Number
-	FGValue				float64						//The Value of 1 FG
+	CoinValue				float64						//The Value of 1 FG
 	Txs			  		[]string					//Array of Transaction Hashes
 	NumTxs				uint64						//Number of Transactions Submited For this Block
 	//Nodes				[]string					//This is current list of Nodes that responded to the last Block.  This array is what is used to determine Block Nodes. string is the nodes public key as a string
@@ -46,7 +46,7 @@ func (block *Block) GetUnsignedBlock() Block{
 	var unsigned Block
 	unsigned.ChainYear = block.ChainYear
 	unsigned.BlockNumber = block.BlockNumber
-	unsigned.FGValue = block.FGValue
+	unsigned.CoinValue = block.CoinValue
 	unsigned.Txs = block.Txs
 	unsigned.NumTxs = block.NumTxs
 	//unsigned.Nodes = block.Nodes
