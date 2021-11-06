@@ -134,7 +134,7 @@ func main(){
 	}
 	if *Gen{
 		fmt.Println("Genesis Block")
-		common.CoinValue = .01
+		common.CoinValue =  float64(1.00)
 		common.USDRate =1
 		common.CreateGenBlocks()
 		

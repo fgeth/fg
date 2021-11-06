@@ -134,12 +134,15 @@ func SwapActiveNodes(an []string){
 func Coins2VDollars(amount *big.Int) float64{
     fg := new(big.Int)
 	fg.SetString("1000000000000000000", 10)
-
+	fmt.Println("Coins in:", amount)
 	f := new(big.Float).SetInt(amount)
 	t := new(big.Float).SetInt(fg)
 	f = f.Quo(f, t)
 
 	fv, _:= f.Float64()
+	fmt.Println("Number of Coins :", fv)
+	fmt.Println("CoinValue: ", CoinValue)
+	fmt.Println("USD Rate: ", USDRate)
 	usd :=   CoinValue * fv * USDRate
 	return usd
 	

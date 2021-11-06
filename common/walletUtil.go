@@ -3,9 +3,11 @@ import(
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	//"github.com/fgeth/fg/crypto"
+	"github.com/fgeth/fg/note"
 	"github.com/fgeth/fg/wallet"
 
 )
@@ -137,5 +139,28 @@ func ImportWallet(dirname, walletId string) (wallet.Wallet, error){
 
 	return errWal, nil
 	
+}
+
+func UpdateWallet(wallet wallet.Wallet){
+	wei:= big.NewInt(0)
+	var coins 	float64
+	var dollars float64
+	var aStack note.Stack
+	
+	for _,v := range wallet.Notes{
+			aStack.Notes = map[string]note.Note{v.Id:v}
+			coins += Wei2Coins(v.Coins)
+			dollars += Coins2VDollars(v.Coins)
+			wei.Add(wei, v.Coins)
+			
+			
+
+			
+
+	}
+	wallet.Coins = coins
+	wallet.Dollars = dollars
+	wallet.Wei = wei
+
 }
 

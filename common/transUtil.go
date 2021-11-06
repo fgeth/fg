@@ -291,7 +291,7 @@ func SendFunds(wallet wallet.Wallet, theItem item.Buy) string{
 
 			if amount < theItem.Amount{
 				aStack.Notes = map[string]note.Note{v.Id:v}
-				amount += Coins2VDollars(&v.Coins)
+				amount += Coins2VDollars(v.Coins)
 				
 				 delete(wallet.Notes, k)
 

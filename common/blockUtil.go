@@ -338,6 +338,7 @@ func CreateGenBlocks(){
 	BlockReward:= big.NewInt(0)
 	BlockReward.SetString("10000000000000000000000000", 10)
 	BlockNumber = uint64(0)
+	USDRate = float64(1)
 	k,_:=crypto.GenerateKey()
 	pubKey,_  := crypto.StoreKey(k, Auth, MyNode.Path)
 	
@@ -349,8 +350,12 @@ func CreateGenBlocks(){
 	theHash := crypto.HashTx([]byte(pubK+s))
 	Dollars := Coins2VDollars(BlockReward)
 	fmt.Println("Dollars :", Dollars)
-	aNote := note.Note{pubKey, Dollars, *BlockReward,theHash,*big.NewInt(0),*big.NewInt(0),""}
-	Wallet.Notes = map[string]note.Note{pubKey: aNote}
+	aNote := note.Note{pubKey, Dollars, BlockReward,theHash,big.NewInt(0),big.NewInt(0),""}
+	Wallet.Notes = make(map[string]note.Note)
+	Wallet.Notes[pubKey] = aNote
+	//Wallet.Coins = Wei2Coins(BlockReward)
+	//Wallet.Wei.Add(Wallet.Wei, BlockReward)
+	//Wallet.Dollars = Coins2VDollars(BlockReward)
 	fmt.Println("Pvt Key:", prvK)
 	var keys  []*ecdsa.PrivateKey
 	keys = append(keys, k)
@@ -368,8 +373,8 @@ func CreateGenBlocks(){
 	prvK, pubK = crypto.Encode(k,&k.PublicKey)
 	Dollars = Coins2VDollars(BlockReward)
 	fmt.Println("Dollars :", Dollars)
-	bNote := note.Note{pubKey, Dollars, *BlockReward,theHash,*big.NewInt(0),*big.NewInt(0),""}
-	Wallet.Notes = map[string]note.Note{pubKey: bNote}
+	bNote := note.Note{pubKey, Dollars, BlockReward,theHash,big.NewInt(0),big.NewInt(0),""}
+	Wallet.Notes[pubKey] = bNote
 	fmt.Println("Pvt Key:", prvK)
 	keys = append(keys, k)
 	credit2 := CreateDebitTxs(BlockReward, pubK, BlockNumber)
@@ -380,10 +385,10 @@ func CreateGenBlocks(){
 	tx2.SaveTx(MyNode.Path)
 	add := crypto.BytesToAddress([]byte(tx1.TxHash))
 	fmt.Println("Address :", add)
-	CoinValue = float64(1.00)
-	Wallet.Coins = Wei2Coins(BlockReward)
-	Wallet.Wei = BlockReward
-	Wallet.Dollars = Coins2VDollars(BlockReward)
+	
+	//Wallet.Coins += Wei2Coins(BlockReward)
+	//Wallet.Wei.Add(Wallet.Wei, BlockReward)
+	//Wallet.Dollars += Coins2VDollars(BlockReward)
 	var block0 block.Block
 	
 	block0.BlockNumber = BlockNumber
@@ -406,8 +411,11 @@ func CreateGenBlocks(){
 	fmt.Println("Pvt Key:", prvK)
 	Dollars = Coins2VDollars(BlockReward)
 	fmt.Println("Dollars :", Dollars)
-	cNote := note.Note{pubKey, Dollars, *BlockReward,theHash,*big.NewInt(0),*big.NewInt(0),""}
-	Wallet.Notes = map[string]note.Note{pubKey: cNote}
+	cNote := note.Note{pubKey, Dollars, BlockReward,theHash,big.NewInt(0),big.NewInt(0),""}
+	Wallet.Notes[pubKey] = cNote
+	//Wallet.Coins += Wei2Coins(BlockReward)
+	//Wallet.Wei.Add(Wallet.Wei, BlockReward)
+	//Wallet.Dollars += Coins2VDollars(BlockReward)
 	keys = append(keys, k)
 	credit3 := CreateDebitTxs(BlockReward, pubK, BlockNumber)
 	var credits3 []transaction.BaseTransaction
@@ -424,8 +432,8 @@ func CreateGenBlocks(){
 	fmt.Println("Pvt Key:", prvK)
 	Dollars = Coins2VDollars(BlockReward)
 	fmt.Println("Dollars :", Dollars)
-	dNote := note.Note{pubKey, Dollars, *BlockReward,theHash,*big.NewInt(0),*big.NewInt(0),""}
-	Wallet.Notes = map[string]note.Note{pubKey: dNote}
+	dNote := note.Note{pubKey, Dollars, BlockReward,theHash,big.NewInt(0),big.NewInt(0),""}
+	Wallet.Notes[pubKey] = dNote
 	keys = append(keys, k)
 	credit4 := CreateDebitTxs(BlockReward, pubK, BlockNumber)
 	var credits4 []transaction.BaseTransaction
@@ -436,10 +444,10 @@ func CreateGenBlocks(){
 	add = crypto.BytesToAddress([]byte(tx1.TxHash))
 	fmt.Println("Address :", add)
 	
-	Wallet.Coins = Wei2Coins(BlockReward)
-	Wallet.Wei = BlockReward
-	Wallet.Dollars = Coins2VDollars(BlockReward)
-	SaveWallet(Wallet, MyNode.Path)
+	//Wallet.Coins += Wei2Coins(BlockReward)
+	//Wallet.Wei.Add(Wallet.Wei, BlockReward)
+	//Wallet.Dollars += Coins2VDollars(BlockReward)
+	
 	var block1 block.Block
 	
 	block1.BlockNumber =BlockNumber
@@ -462,5 +470,6 @@ func CreateGenBlocks(){
 	MS.Max = MS.Dollars
 	MS.LMax = MS.Max
 	MS.IR = (MS.Max - MS.LMax) / MS.LMax
-	USDRate = float64(1)
+	UpdateWallet(Wallet)
+	SaveWallet(Wallet, MyNode.Path)
 }
